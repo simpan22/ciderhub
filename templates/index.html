@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}CiderHub — Dashboard{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Dashboard</h1>
+    <p class="muted">Batches, trees, and events will show up here.</p>
+</section>
+
+<section class="card">
+    <h2>Status</h2>
+    <p>Database connection: <strong class="ok">{{ db_status }}</strong></p>
+</section>
+{% endblock %}

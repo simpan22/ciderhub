@@ -1,0 +1,179 @@
+digraph CiderHubSchema {
+  graph [rankdir=LR, fontname="Helvetica", bgcolor="white", pad=0.3, nodesep=0.45, ranksep=1.0, splines=ortho];
+  node [shape=plain, fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=10, color="#555555", penwidth=1.2];
+
+  // ---- reference / core tables ----
+  seasons [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>seasons</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT">name</TD></TR>
+      <TR><TD ALIGN="LEFT">starts_on</TD></TR>
+      <TR><TD ALIGN="LEFT">ends_on</TD></TR>
+    </TABLE>
+  >];
+
+  trees [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>trees</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT">name</TD></TR>
+      <TR><TD ALIGN="LEFT">variety (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">planted_on (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">location</TD></TR>
+      <TR><TD ALIGN="LEFT">notes</TD></TR>
+    </TABLE>
+  >];
+
+  vessels [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>vessels</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT">name</TD></TR>
+      <TR><TD ALIGN="LEFT">capacity_l</TD></TR>
+      <TR><TD ALIGN="LEFT">kind</TD></TR>
+      <TR><TD ALIGN="LEFT">active</TD></TR>
+    </TABLE>
+  >];
+
+  batches [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>batches</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>season_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">code</TD></TR>
+      <TR><TD ALIGN="LEFT">name</TD></TR>
+      <TR><TD ALIGN="LEFT">status</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>vessel_id</I> (FK, nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">started_on</TD></TR>
+      <TR><TD ALIGN="LEFT">notes</TD></TR>
+    </TABLE>
+  >];
+
+  // ---- events spine ----
+  events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>events</B> (spine)</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>batch_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">event_type</TD></TR>
+      <TR><TD ALIGN="LEFT">occurred_at</TD></TR>
+      <TR><TD ALIGN="LEFT">created_at</TD></TR>
+    </TABLE>
+  >];
+
+  // ---- one typed table per event type (class-table inheritance) ----
+  picking_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>picking_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>tree_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">weight_kg</TD></TR>
+    </TABLE>
+  >];
+
+  juicing_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>juicing_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">input_weight_kg</TD></TR>
+      <TR><TD ALIGN="LEFT">output_volume_l</TD></TR>
+      <TR><TD ALIGN="LEFT">yield_pct</TD></TR>
+      <TR><TD ALIGN="LEFT">equipment</TD></TR>
+    </TABLE>
+  >];
+
+  additive_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>additive_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">substance</TD></TR>
+      <TR><TD ALIGN="LEFT">amount</TD></TR>
+      <TR><TD ALIGN="LEFT">unit</TD></TR>
+    </TABLE>
+  >];
+
+  measurement_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>measurement_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">specific_gravity (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">ph (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">temperature_c (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">volume_l (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">tasting_notes (nullable)</TD></TR>
+    </TABLE>
+  >];
+
+  racking_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>racking_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>from_vessel_id</I> (FK, nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>to_vessel_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">volume_l</TD></TR>
+      <TR><TD ALIGN="LEFT">loss_l</TD></TR>
+    </TABLE>
+  >];
+
+  bottling_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>bottling_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">bottle_count</TD></TR>
+      <TR><TD ALIGN="LEFT">bottle_size_ml</TD></TR>
+      <TR><TD ALIGN="LEFT">carbonation_method</TD></TR>
+    </TABLE>
+  >];
+
+  note_events [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>note_events</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">text</TD></TR>
+      <TR><TD ALIGN="LEFT">photo_path (nullable)</TD></TR>
+    </TABLE>
+  >];
+
+  // ---- sensors (separate telemetry path) ----
+  sensors [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#5b3a29" ALIGN="CENTER"><FONT COLOR="white"><B>sensors</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT">label</TD></TR>
+      <TR><TD ALIGN="LEFT">location</TD></TR>
+      <TR><TD ALIGN="LEFT">kind</TD></TR>
+    </TABLE>
+  >];
+
+  sensor_readings [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#5b3a29" ALIGN="CENTER"><FONT COLOR="white"><B>sensor_readings</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>sensor_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">recorded_at</TD></TR>
+      <TR><TD ALIGN="LEFT">metric</TD></TR>
+      <TR><TD ALIGN="LEFT">value</TD></TR>
+    </TABLE>
+  >];
+
+  // ---- relations ----
+  seasons -> batches [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+  vessels -> batches [label="1:N (nullable)", arrowhead=crow, dir=both, arrowtail=none];
+  batches -> events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+  trees -> picking_events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+  vessels -> racking_events [label="1:N (from/to)", arrowhead=crow, dir=both, arrowtail=none];
+  sensors -> sensor_readings [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+
+  events -> picking_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> juicing_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> additive_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> measurement_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> racking_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> bottling_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+  events -> note_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
+
+  { rank=same; seasons; trees; vessels; }
+  { rank=same; picking_events; juicing_events; additive_events; measurement_events; racking_events; bottling_events; note_events; }
+}

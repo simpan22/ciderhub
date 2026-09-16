@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS sensor_readings;
+DROP TABLE IF EXISTS sensors;
+DROP TABLE IF EXISTS note_events;
+DROP TABLE IF EXISTS bottling_events;
+DROP TABLE IF EXISTS racking_events;
+DROP TABLE IF EXISTS measurement_events;
+DROP TABLE IF EXISTS additive_events;
+DROP TABLE IF EXISTS juicing_events;
+DROP TABLE IF EXISTS picking_events;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS batches;
+DROP TABLE IF EXISTS vessels;
+DROP TABLE IF EXISTS trees;
+DROP TABLE IF EXISTS seasons;
