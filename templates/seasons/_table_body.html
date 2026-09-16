@@ -1,0 +1,25 @@
+{% for row in rows %}
+{% if row.editing %}
+<tr>
+    <td colspan="4">
+        <form class="inline-form" hx-put="/seasons/{{ row.season.id }}" hx-target="#seasons-table-body" hx-swap="innerHTML">
+            <input type="text" name="name" value="{{ row.season.name }}" required>
+            <input type="date" name="starts_on" value="{{ row.season.starts_on }}" required>
+            <input type="date" name="ends_on" value="{{ row.season.ends_on.as_deref().unwrap_or("") }}">
+            <button type="submit">Save</button>
+            <button type="button" hx-get="/seasons/table" hx-target="#seasons-table-body" hx-swap="innerHTML">Cancel</button>
+        </form>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td>{{ row.season.name }}</td>
+    <td>{{ row.season.starts_on }}</td>
+    <td>{{ row.season.ends_on.as_deref().unwrap_or("—") }}</td>
+    <td class="actions">
+        <button hx-get="/seasons/{{ row.season.id }}/edit" hx-target="#seasons-table-body" hx-swap="innerHTML">Edit</button>
+        <button class="danger" hx-delete="/seasons/{{ row.season.id }}" hx-target="#seasons-table-body" hx-swap="innerHTML" hx-confirm="Delete this season?">Delete</button>
+    </td>
+</tr>
+{% endif %}
+{% endfor %}

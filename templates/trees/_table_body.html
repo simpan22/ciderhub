@@ -1,0 +1,28 @@
+{% for row in rows %}
+{% if row.editing %}
+<tr>
+    <td colspan="5">
+        <form class="inline-form" hx-put="/trees/{{ row.tree.id }}" hx-target="#trees-table-body" hx-swap="innerHTML">
+            <input type="text" name="name" value="{{ row.tree.name }}" required>
+            <input type="text" name="variety" value="{{ row.tree.variety.as_deref().unwrap_or("") }}" placeholder="unknown">
+            <input type="date" name="planted_on" value="{{ row.tree.planted_on.as_deref().unwrap_or("") }}">
+            <input type="text" name="location" value="{{ row.tree.location.as_deref().unwrap_or("") }}">
+            <input type="text" name="notes" value="{{ row.tree.notes.as_deref().unwrap_or("") }}">
+            <button type="submit">Save</button>
+            <button type="button" hx-get="/trees/table" hx-target="#trees-table-body" hx-swap="innerHTML">Cancel</button>
+        </form>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td>{{ row.tree.name }}</td>
+    <td>{{ row.tree.variety.as_deref().unwrap_or("unknown") }}</td>
+    <td>{{ row.tree.planted_on.as_deref().unwrap_or("—") }}</td>
+    <td>{{ row.tree.location.as_deref().unwrap_or("—") }}</td>
+    <td class="actions">
+        <button hx-get="/trees/{{ row.tree.id }}/edit" hx-target="#trees-table-body" hx-swap="innerHTML">Edit</button>
+        <button class="danger" hx-delete="/trees/{{ row.tree.id }}" hx-target="#trees-table-body" hx-swap="innerHTML" hx-confirm="Delete this tree?">Delete</button>
+    </td>
+</tr>
+{% endif %}
+{% endfor %}

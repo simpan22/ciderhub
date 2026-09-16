@@ -1,0 +1,27 @@
+{% for row in rows %}
+{% if row.editing %}
+<tr>
+    <td colspan="5">
+        <form class="inline-form" hx-put="/vessels/{{ row.vessel.id }}" hx-target="#vessels-table-body" hx-swap="innerHTML">
+            <input type="text" name="name" value="{{ row.vessel.name }}" required>
+            <input type="number" step="0.1" name="capacity_l" value="{{ row.vessel.capacity_l.unwrap_or(0.0) }}" placeholder="litres">
+            <input type="text" name="kind" value="{{ row.vessel.kind }}" placeholder="carboy, fermenter...">
+            <label class="checkbox"><input type="checkbox" name="active" {% if row.vessel.active %}checked{% endif %}> active</label>
+            <button type="submit">Save</button>
+            <button type="button" hx-get="/vessels/table" hx-target="#vessels-table-body" hx-swap="innerHTML">Cancel</button>
+        </form>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td>{{ row.vessel.name }}</td>
+    <td>{% if let Some(capacity) = row.vessel.capacity_l %}{{ capacity }} L{% else %}—{% endif %}</td>
+    <td>{{ row.vessel.kind }}</td>
+    <td>{% if row.vessel.active %}<span class="ok">active</span>{% else %}<span class="muted">retired</span>{% endif %}</td>
+    <td class="actions">
+        <button hx-get="/vessels/{{ row.vessel.id }}/edit" hx-target="#vessels-table-body" hx-swap="innerHTML">Edit</button>
+        <button class="danger" hx-delete="/vessels/{{ row.vessel.id }}" hx-target="#vessels-table-body" hx-swap="innerHTML" hx-confirm="Delete this vessel?">Delete</button>
+    </td>
+</tr>
+{% endif %}
+{% endfor %}

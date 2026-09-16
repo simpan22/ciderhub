@@ -94,3 +94,149 @@ a:hover {
 .ok {
     color: var(--color-accent);
 }
+
+/* Forms */
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+}
+
+label.checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+input, select, textarea {
+    font: inherit;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--color-text);
+}
+
+button {
+    font: inherit;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--color-brand);
+    border-radius: 4px;
+    background: var(--color-brand);
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button[type="button"] {
+    background: transparent;
+    color: var(--color-brand);
+}
+
+button.danger {
+    background: #fff;
+    color: #a33;
+    border-color: #a33;
+    margin-top: 0.75rem;
+}
+
+.inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.9rem;
+}
+
+.inline-form h2 {
+    flex-basis: 100%;
+}
+
+/* Tables */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    padding: 0;
+}
+
+.table th, .table td {
+    text-align: left;
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.92rem;
+}
+
+.table th {
+    color: var(--color-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+}
+
+.table td.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 3px;
+    background: #eee6d8;
+    color: #6b5a2e;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+/* Batch timeline */
+
+.yield-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+
+.yield-list li {
+    padding: 0.2rem 0;
+}
+
+.timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-left: 2px solid var(--color-border);
+}
+
+.timeline li {
+    padding: 0.4rem 0 0.4rem 1rem;
+    position: relative;
+}
+
+.timeline li::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 0.75rem;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-accent);
+}
+
+.timeline__date {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+}
+
+.timeline__kind {
+    font-weight: 600;
+    margin-right: 0.5rem;
+}

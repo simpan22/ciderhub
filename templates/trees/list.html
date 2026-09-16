@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}CiderHub — Trees{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Trees</h1>
+</section>
+
+<form class="card inline-form" hx-post="/trees" hx-target="#trees-table-body" hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful) this.reset()">
+    <h2>Add tree</h2>
+    <label>Name <input type="text" name="name" placeholder="Tree 1" required></label>
+    <label>Variety <input type="text" name="variety" placeholder="unknown"></label>
+    <label>Planted on <input type="date" name="planted_on"></label>
+    <label>Location <input type="text" name="location" placeholder="back garden, north corner"></label>
+    <label>Notes <input type="text" name="notes"></label>
+    <button type="submit">Add</button>
+</form>
+
+<table class="card table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Variety</th>
+            <th>Planted</th>
+            <th>Location</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="trees-table-body">
+        {% include "trees/_table_body.html" %}
+    </tbody>
+</table>
+{% endblock %}

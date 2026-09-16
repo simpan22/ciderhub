@@ -3,12 +3,8 @@ use askama_web::WebTemplate;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use sqlx::SqlitePool;
 
-#[derive(Clone)]
-pub struct AppState {
-    pub db: SqlitePool,
-}
+use crate::state::AppState;
 
 #[derive(Template, WebTemplate)]
 #[template(path = "index.html")]

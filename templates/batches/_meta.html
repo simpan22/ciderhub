@@ -1,0 +1,24 @@
+<section class="card" id="batch-meta">
+    <h2>Batch details</h2>
+    <p class="muted">{{ batch.season_name }}{% if let Some(vessel_name) = batch.vessel_name %} · {{ vessel_name }}{% endif %}</p>
+    <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
+        <label>Status
+            <select name="status">
+                {% for opt in statuses %}
+                <option value="{{ opt.value }}" {% if opt.selected %}selected{% endif %}>{{ opt.value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Vessel
+            <select name="vessel_id">
+                <option value="">— unassigned —</option>
+                {% for v in vessels %}
+                <option value="{{ v.id }}" {% if v.selected %}selected{% endif %}>{{ v.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Notes <input type="text" name="notes" value="{{ batch.notes.as_deref().unwrap_or("") }}"></label>
+        <button type="submit">Save</button>
+    </form>
+    <button class="danger" hx-delete="/batches/{{ batch.id }}" hx-confirm="Delete this batch and all its logged events? This cannot be undone.">Delete batch</button>
+</section>

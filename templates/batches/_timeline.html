@@ -1,0 +1,27 @@
+<div class="card" id="batch-timeline">
+    <h2>Tree yield</h2>
+    {% if tree_yields.is_empty() %}
+    <p class="muted">No apples picked yet.</p>
+    {% else %}
+    <ul class="yield-list">
+        {% for ty in tree_yields %}
+        <li>{{ ty.tree_name }} — {{ ty.total_kg }} kg</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h2>Timeline</h2>
+    {% if timeline.is_empty() %}
+    <p class="muted">No events logged yet.</p>
+    {% else %}
+    <ol class="timeline">
+        {% for row in timeline %}
+        <li>
+            <span class="timeline__date">{{ row.occurred_at }}</span>
+            <span class="timeline__kind">{{ row.kind_label }}</span>
+            <span class="timeline__summary">{{ row.summary }}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+</div>

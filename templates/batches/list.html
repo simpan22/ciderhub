@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}CiderHub — Batches{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Batches</h1>
+</section>
+
+<form class="card inline-form" method="post" action="/batches">
+    <h2>New batch</h2>
+    <label>Season
+        <select name="season_id" required>
+            {% for s in seasons %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Code <input type="text" name="code" placeholder="2026-A" required></label>
+    <label>Name <input type="text" name="name" placeholder="Bramley blend" required></label>
+    <label>Vessel
+        <select name="vessel_id">
+            <option value="">— unassigned —</option>
+            {% for v in vessels %}
+            <option value="{{ v.id }}">{{ v.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Started on <input type="date" name="started_on"></label>
+    <button type="submit">Create</button>
+</form>
+
+<table class="card table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Season</th>
+            <th>Vessel</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in batches %}
+        <tr>
+            <td><a href="/batches/{{ b.id }}">{{ b.code }}</a></td>
+            <td>{{ b.name }}</td>
+            <td>{{ b.season_name }}</td>
+            <td>{{ b.vessel_name.as_deref().unwrap_or("—") }}</td>
+            <td><span class="status">{{ b.status }}</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
