@@ -13,98 +13,110 @@
 
 <details class="card">
     <summary>Log picking</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/picking" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/picking" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Month
-            <select name="month">
-                {% for m in months %}
-                <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
-        <label>Tree
-            <select name="tree_id" required>
-                {% for t in trees %}
-                <option value="{{ t.id }}">{{ t.name }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Weight (kg) <input type="number" step="0.1" min="0" name="weight_kg" required></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Month
+                <select name="month">
+                    {% for m in months %}
+                    <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
+            <label>Tree
+                <select name="tree_id" required>
+                    {% for t in trees %}
+                    <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Weight (kg) <input type="number" step="0.1" min="0" name="weight_kg" required></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
 <details class="card">
     <summary>Log juicing</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/juicing" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/juicing" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Month
-            <select name="month">
-                {% for m in months %}
-                <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
-        <label>Input weight (kg) <input type="number" step="0.1" min="0" name="input_weight_kg" required></label>
-        <label>Output volume (L) <input type="number" step="0.1" min="0" name="output_volume_l" required></label>
-        <label>Equipment <input type="text" name="equipment"></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Month
+                <select name="month">
+                    {% for m in months %}
+                    <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
+            <label>Input weight (kg) <input type="number" step="0.1" min="0" name="input_weight_kg" required></label>
+            <label>Output volume (L) <input type="number" step="0.1" min="0" name="output_volume_l" required></label>
+            <label>Equipment <input type="text" name="equipment"></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
 <details class="card">
     <summary>Log additive</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/additive" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/additive" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
-        <label>Substance <input type="text" name="substance" placeholder="e.g. Nottingham ale yeast" required></label>
-        <label>Amount <input type="number" step="0.01" min="0" name="amount" required></label>
-        <label>Unit <input type="text" name="unit" placeholder="g, tsp, tablets..." required></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Substance <input type="text" name="substance" placeholder="e.g. Nottingham ale yeast" required></label>
+            <label>Amount <input type="number" step="0.01" min="0" name="amount" required></label>
+            <label>Unit <input type="text" name="unit" placeholder="g, tsp, tablets..." required></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
 <details class="card">
     <summary>Log measurement</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/measurement" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/measurement" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
-        <label>Specific gravity <input type="number" step="0.001" name="specific_gravity"></label>
-        <label>pH <input type="number" step="0.01" name="ph"></label>
-        <label>Temperature (°C) <input type="number" step="0.1" name="temperature_c"></label>
-        <label>Volume (L) <input type="number" step="0.1" name="volume_l"></label>
-        <label>Tasting notes <input type="text" name="tasting_notes"></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Specific gravity <input type="number" step="0.001" name="specific_gravity"></label>
+            <label>pH <input type="number" step="0.01" name="ph"></label>
+            <label>Temperature (°C) <input type="number" step="0.1" name="temperature_c"></label>
+            <label>Volume (L) <input type="number" step="0.1" name="volume_l"></label>
+            <label>Tasting notes <input type="text" name="tasting_notes"></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
 <details class="card">
     <summary>Log racking</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/racking" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/racking" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
-        <label>Volume (L) <input type="number" step="0.1" min="0" name="volume_l" required></label>
-        <label>Loss (L) <input type="number" step="0.1" min="0" name="loss_l"></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Volume (L) <input type="number" step="0.1" min="0" name="volume_l" required></label>
+            <label>Loss (L) <input type="number" step="0.1" min="0" name="loss_l"></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
 <details class="card">
     <summary>Log bottling</summary>
-    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/bottling" hx-target="#batch-timeline" hx-swap="outerHTML"
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/bottling" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
-        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
-        <label>Bottle count <input type="number" min="1" name="bottle_count" required></label>
-        <label>Bottle size (ml) <input type="number" min="1" name="bottle_size_ml" placeholder="750" required></label>
-        <label>Carbonation method <input type="text" name="carbonation_method" placeholder="priming sugar, forced..."></label>
-        <label>Notes <input type="text" name="notes"></label>
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Bottle count <input type="number" min="1" name="bottle_count" required></label>
+            <label>Bottle size (ml) <input type="number" min="1" name="bottle_size_ml" placeholder="750" required></label>
+            <label>Carbonation method <input type="text" name="carbonation_method" placeholder="priming sugar, forced..."></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
         <button type="submit">Add</button>
     </form>
 </details>

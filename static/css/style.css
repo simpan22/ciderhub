@@ -171,6 +171,23 @@ button.danger {
     flex-basis: 100%;
 }
 
+.log-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.log-form__fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.9rem;
+}
+
+.log-form button[type="submit"] {
+    align-self: flex-end;
+}
+
 /* Tables */
 
 .table {
