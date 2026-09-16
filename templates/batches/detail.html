@@ -12,33 +12,6 @@
 {% include "batches/_timeline.html" %}
 
 <details class="card">
-    <summary>Log picking</summary>
-    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/picking" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
-        <div class="log-form__fields">
-            <label>Month
-                <select name="month">
-                    {% for m in months %}
-                    <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
-            <label>Tree
-                <select name="tree_id" required>
-                    {% for t in trees %}
-                    <option value="{{ t.id }}">{{ t.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Weight (kg) <input type="number" step="0.1" min="0" name="weight_kg" required></label>
-            <label>Notes <input type="text" name="notes"></label>
-        </div>
-        <button type="submit">Add</button>
-    </form>
-</details>
-
-<details class="card">
     <summary>Log juicing</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/juicing" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
@@ -51,11 +24,19 @@
                 </select>
             </label>
             <label>Day <input type="number" name="day" min="1" max="31" value="{{ today_day }}" required></label>
-            <label>Input weight (kg) <input type="number" step="0.1" min="0" name="input_weight_kg" required></label>
             <label>Output volume (L) <input type="number" step="0.1" min="0" name="output_volume_l" required></label>
             <label>Equipment <input type="text" name="equipment"></label>
             <label>Notes <input type="text" name="notes"></label>
         </div>
+        <fieldset class="log-form__trees">
+            <legend>Trees pressed</legend>
+            {% for t in tree_fields %}
+            <div class="tree-weight-row">
+                <label class="checkbox"><input type="checkbox" name="use_tree_{{ t.tree_id }}"> {{ t.tree_name }}</label>
+                <input type="number" step="0.1" min="0" name="weight_tree_{{ t.tree_id }}" placeholder="kg (optional)">
+            </div>
+            {% endfor %}
+        </fieldset>
         <button type="submit">Add</button>
     </form>
 </details>

@@ -1,0 +1,15 @@
+<li id="event-{{ event_id }}" class="timeline__edit-row">
+    <form class="log-form" hx-put="/batches/{{ batch_id }}/events/bottling/{{ event_id }}" hx-target="#batch-timeline" hx-swap="outerHTML">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ occurred_at }}" required></label>
+            <label>Bottle count <input type="number" min="1" name="bottle_count" value="{{ bottle_count }}" required></label>
+            <label>Bottle size (ml) <input type="number" min="1" name="bottle_size_ml" value="{{ bottle_size_ml }}" required></label>
+            <label>Carbonation method <input type="text" name="carbonation_method" value="{{ carbonation_method.as_deref().unwrap_or("") }}"></label>
+            <label>Notes <input type="text" name="notes" value="{{ notes.as_deref().unwrap_or("") }}"></label>
+        </div>
+        <div class="log-form__actions">
+            <button type="button" hx-get="/batches/{{ batch_id }}/timeline" hx-target="#batch-timeline" hx-swap="outerHTML">Cancel</button>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</li>

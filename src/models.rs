@@ -88,34 +88,23 @@ pub struct UpdateBatchForm {
 /// Formatting the summary in Rust (rather than branching per event type in
 /// the template) keeps the template a flat list, not a 7-way match.
 pub struct TimelineRow {
+    pub event_id: i64,
     pub occurred_at: String,
     pub kind_label: &'static str,
+    /// Lowercase, matches the `{kind}` path segment used to edit this event.
+    pub kind_slug: &'static str,
     pub summary: String,
 }
 
-// Picking and juicing always happen within the batch's own harvest
-// season, so the form only asks for month/day — the year is derived
-// server-side from the batch's season.
-#[derive(Deserialize)]
-pub struct AddPickingForm {
-    pub month: u32,
-    pub day: u32,
+/// One tree's checkbox + optional weight in the "Log juicing" /
+/// juicing-edit form. `checked`/`weight_kg` are only meaningful when
+/// rendering an edit form for an existing event; on the blank "add"
+/// form every tree starts unchecked with no weight.
+pub struct TreeWeightField {
     pub tree_id: i64,
-    pub weight_kg: f64,
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub notes: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct AddJuicingForm {
-    pub month: u32,
-    pub day: u32,
-    pub input_weight_kg: f64,
-    pub output_volume_l: f64,
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub equipment: Option<String>,
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub notes: Option<String>,
+    pub tree_name: String,
+    pub checked: bool,
+    pub weight_kg: Option<f64>,
 }
 
 pub struct MonthOption {

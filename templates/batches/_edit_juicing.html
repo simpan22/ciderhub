@@ -1,0 +1,30 @@
+<li id="event-{{ event_id }}" class="timeline__edit-row">
+    <form class="log-form" hx-put="/batches/{{ batch_id }}/events/juicing/{{ event_id }}" hx-target="#batch-timeline" hx-swap="outerHTML">
+        <div class="log-form__fields">
+            <label>Month
+                <select name="month">
+                    {% for m in months %}
+                    <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Day <input type="number" name="day" min="1" max="31" value="{{ day }}" required></label>
+            <label>Output volume (L) <input type="number" step="0.1" min="0" name="output_volume_l" value="{{ output_volume_l }}" required></label>
+            <label>Equipment <input type="text" name="equipment" value="{{ equipment.as_deref().unwrap_or("") }}"></label>
+            <label>Notes <input type="text" name="notes" value="{{ notes.as_deref().unwrap_or("") }}"></label>
+        </div>
+        <fieldset class="log-form__trees">
+            <legend>Trees pressed</legend>
+            {% for t in tree_fields %}
+            <div class="tree-weight-row">
+                <label class="checkbox"><input type="checkbox" name="use_tree_{{ t.tree_id }}" {% if t.checked %}checked{% endif %}> {{ t.tree_name }}</label>
+                <input type="number" step="0.1" min="0" name="weight_tree_{{ t.tree_id }}" placeholder="kg (optional)" value="{% if let Some(w) = t.weight_kg %}{{ w }}{% endif %}">
+            </div>
+            {% endfor %}
+        </fieldset>
+        <div class="log-form__actions">
+            <button type="button" hx-get="/batches/{{ batch_id }}/timeline" hx-target="#batch-timeline" hx-swap="outerHTML">Cancel</button>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</li>

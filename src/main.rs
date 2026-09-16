@@ -60,29 +60,66 @@ async fn main() -> anyhow::Result<()> {
                 .put(handlers::batches::update)
                 .delete(handlers::batches::delete),
         )
-        .route(
-            "/batches/{id}/events/picking",
-            axum::routing::post(handlers::batches::add_picking),
-        )
+        .route("/batches/{id}/timeline", get(handlers::batches::timeline_fragment))
         .route(
             "/batches/{id}/events/juicing",
             axum::routing::post(handlers::batches::add_juicing),
+        )
+        .route(
+            "/batches/{batch_id}/events/juicing/{event_id}/edit",
+            get(handlers::batches::edit_juicing_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/juicing/{event_id}",
+            axum::routing::put(handlers::batches::update_juicing),
         )
         .route(
             "/batches/{id}/events/additive",
             axum::routing::post(handlers::batches::add_additive),
         )
         .route(
+            "/batches/{batch_id}/events/additive/{event_id}/edit",
+            get(handlers::batches::edit_additive_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/additive/{event_id}",
+            axum::routing::put(handlers::batches::update_additive),
+        )
+        .route(
             "/batches/{id}/events/measurement",
             axum::routing::post(handlers::batches::add_measurement),
+        )
+        .route(
+            "/batches/{batch_id}/events/measurement/{event_id}/edit",
+            get(handlers::batches::edit_measurement_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/measurement/{event_id}",
+            axum::routing::put(handlers::batches::update_measurement),
         )
         .route(
             "/batches/{id}/events/racking",
             axum::routing::post(handlers::batches::add_racking),
         )
         .route(
+            "/batches/{batch_id}/events/racking/{event_id}/edit",
+            get(handlers::batches::edit_racking_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/racking/{event_id}",
+            axum::routing::put(handlers::batches::update_racking),
+        )
+        .route(
             "/batches/{id}/events/bottling",
             axum::routing::post(handlers::batches::add_bottling),
+        )
+        .route(
+            "/batches/{batch_id}/events/bottling/{event_id}/edit",
+            get(handlers::batches::edit_bottling_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/bottling/{event_id}",
+            axum::routing::put(handlers::batches::update_bottling),
         )
         .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))

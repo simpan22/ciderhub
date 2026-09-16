@@ -1,0 +1,14 @@
+<li id="event-{{ event_id }}" class="timeline__edit-row">
+    <form class="log-form" hx-put="/batches/{{ batch_id }}/events/racking/{{ event_id }}" hx-target="#batch-timeline" hx-swap="outerHTML">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ occurred_at }}" required></label>
+            <label>Volume (L) <input type="number" step="0.1" min="0" name="volume_l" value="{{ volume_l }}" required></label>
+            <label>Loss (L) <input type="number" step="0.1" min="0" name="loss_l" value="{% if let Some(v) = loss_l %}{{ v }}{% endif %}"></label>
+            <label>Notes <input type="text" name="notes" value="{{ notes.as_deref().unwrap_or("") }}"></label>
+        </div>
+        <div class="log-form__actions">
+            <button type="button" hx-get="/batches/{{ batch_id }}/timeline" hx-target="#batch-timeline" hx-swap="outerHTML">Cancel</button>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</li>

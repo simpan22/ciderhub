@@ -1,0 +1,17 @@
+<li id="event-{{ event_id }}" class="timeline__edit-row">
+    <form class="log-form" hx-put="/batches/{{ batch_id }}/events/measurement/{{ event_id }}" hx-target="#batch-timeline" hx-swap="outerHTML">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ occurred_at }}" required></label>
+            <label>Specific gravity <input type="number" step="0.001" name="specific_gravity" value="{% if let Some(v) = specific_gravity %}{{ v }}{% endif %}"></label>
+            <label>pH <input type="number" step="0.01" name="ph" value="{% if let Some(v) = ph %}{{ v }}{% endif %}"></label>
+            <label>Temperature (°C) <input type="number" step="0.1" name="temperature_c" value="{% if let Some(v) = temperature_c %}{{ v }}{% endif %}"></label>
+            <label>Volume (L) <input type="number" step="0.1" name="volume_l" value="{% if let Some(v) = volume_l %}{{ v }}{% endif %}"></label>
+            <label>Tasting notes <input type="text" name="tasting_notes" value="{{ tasting_notes.as_deref().unwrap_or("") }}"></label>
+            <label>Notes <input type="text" name="notes" value="{{ notes.as_deref().unwrap_or("") }}"></label>
+        </div>
+        <div class="log-form__actions">
+            <button type="button" hx-get="/batches/{{ batch_id }}/timeline" hx-target="#batch-timeline" hx-swap="outerHTML">Cancel</button>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</li>

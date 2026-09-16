@@ -188,6 +188,44 @@ button.danger {
     align-self: flex-end;
 }
 
+.log-form__actions {
+    display: flex;
+    gap: 0.5rem;
+    align-self: flex-end;
+}
+
+.log-form__trees {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem 1rem;
+    margin: 0;
+}
+
+.log-form__trees legend {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-muted);
+    padding: 0 0.3rem;
+}
+
+.tree-weight-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+}
+
+.tree-weight-row label.checkbox {
+    min-width: 8rem;
+    color: var(--color-text);
+    font-size: 0.95rem;
+}
+
+.tree-weight-row input[type="number"] {
+    max-width: 9rem;
+}
+
 /* Tables */
 
 .table {
@@ -252,8 +290,27 @@ button.danger {
 }
 
 .timeline li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
     padding: 0.4rem 0 0.4rem 1rem;
     position: relative;
+}
+
+.timeline li.timeline__edit-row {
+    display: block;
+}
+
+.timeline__content {
+    flex: 1 1 auto;
+}
+
+.timeline__edit {
+    flex-shrink: 0;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.82rem;
 }
 
 .timeline li::before {

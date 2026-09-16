@@ -16,10 +16,15 @@
     {% else %}
     <ol class="timeline">
         {% for row in timeline %}
-        <li>
-            <span class="timeline__date">{{ row.occurred_at }}</span>
-            <span class="timeline__kind">{{ row.kind_label }}</span>
-            <span class="timeline__summary">{{ row.summary }}</span>
+        <li id="event-{{ row.event_id }}">
+            <span class="timeline__content">
+                <span class="timeline__date">{{ row.occurred_at }}</span>
+                <span class="timeline__kind">{{ row.kind_label }}</span>
+                <span class="timeline__summary">{{ row.summary }}</span>
+            </span>
+            <button type="button" class="timeline__edit"
+                    hx-get="/batches/{{ batch_id }}/events/{{ row.kind_slug }}/{{ row.event_id }}/edit"
+                    hx-target="#event-{{ row.event_id }}" hx-swap="outerHTML">Edit</button>
         </li>
         {% endfor %}
     </ol>

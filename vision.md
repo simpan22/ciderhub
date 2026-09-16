@@ -43,12 +43,12 @@ Core entities:
   shared timeline. Rather than one generic table with a JSON payload, each
   event *type* is its own small, fully-typed table (see §4) that shares
   the same `events` spine for ordering and batch association. Types:
-  - `picking` — apples harvested from a specific tree into this batch
-    (tree reference, weight). A batch fed by several trees just gets one
-    `picking` event per tree; this is also how a batch's tree
-    composition is derived — no separate lot/blend entity needed.
-  - `juicing` — pressing event (input weight, output volume, yield %,
-    equipment used).
+  - `juicing` — pressing event: output volume, yield %, equipment used,
+    and which trees fed it. Picking isn't a separate event type — a
+    juicing event just lists the trees pressed, each with an optional
+    weight (you may know a tree was used without having weighed its
+    share). Yield % is computed from whichever tree weights are known;
+    if none are, it's left unset rather than guessed.
   - `additive` — yeast pitch, nutrient, campden tablets, etc. (substance,
     amount).
   - `measurement` — a point-in-time reading tied to a batch: specific
@@ -65,10 +65,10 @@ Core entities:
   (sensor_id, timestamp, metric, value), decoupled from the manual Event
   log because of very different volume/shape.
 
-Relationships: a `Batch` has many `Event`s; a `picking` event references
-exactly one `Tree`, so a `Batch`'s tree composition falls out of its
-picking events (many-to-many via the event log, not a separate join
-table); `SensorReading`s belong to a `Sensor`, and a `Sensor` can
+Relationships: a `Batch` has many `Event`s; a `juicing` event has many
+tree contributions (tree + optional weight), so a `Batch`'s tree
+composition falls out of its juicing events, not a separate lot/blend
+entity; `SensorReading`s belong to a `Sensor`, and a `Sensor` can
 optionally be associated with a general location (e.g. "fermentation
 room") rather than a specific batch.
 
@@ -168,15 +168,17 @@ events(
 -- One table per event type, each keyed 1:1 on events.id.
 -- event_type on the spine says which of these to join.
 
-picking_events(
-  event_id PK/FK -> events.id,
-  tree_id FK -> trees.id,
-  weight_kg
-)
-
 juicing_events(
   event_id PK/FK -> events.id,
-  input_weight_kg, output_volume_l, yield_pct, equipment
+  output_volume_l, yield_pct NULL, equipment NULL
+)
+
+-- One row per tree that fed a juicing event; weight_kg is optional.
+juicing_tree_weights(
+  id PK,
+  event_id FK -> juicing_events.event_id,
+  tree_id FK -> trees.id,
+  weight_kg NULL
 )
 
 additive_events(
@@ -250,18 +252,20 @@ Design notes:
 **Phase 1 — Core logging (MVP)**
 - CRUD for Seasons, Trees, Batches.
 - Batch detail page showing a chronological event timeline and a summary
-  of which trees contributed (derived from its `picking` events).
-- Log a `picking` event (tree, weight) — a batch can have several, one
-  per tree it drew fruit from.
-- Log a `juicing` event (input/output, computed yield %).
+  of which trees contributed (derived from its `juicing` events).
+- Log a `juicing` event: output volume, equipment, and a checklist of
+  which trees fed it with an optional weight per tree; yield % computed
+  from whichever weights are known.
 - Log an `additive` event (substance, amount, unit — yeast, nutrients,
   campden, etc.).
 - Log a `measurement` event (specific gravity, pH, temp, tasting notes);
   ABV is computed on read from two gravity measurements, not stored.
 - Log a `racking` event (volume moved, volume lost) and a `bottling`
-  event (bottle count/size, carbonation method) — all seven event types
-  from §2 are now logged; status derivation already covers the
+  event (bottle count/size, carbonation method) — every event type from
+  §2 except `note` is now logged; status derivation already covers the
   resulting `conditioning`/`bottled` states.
+- Every loggable event type can also be edited in place from the
+  timeline (pre-filled form swapped in for that row), not just added.
 - htmx-powered inline "add event" forms on the batch page (no reload).
 
 **Phase 2 — Batch lifecycle & reporting**

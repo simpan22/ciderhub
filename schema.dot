@@ -50,23 +50,23 @@ digraph CiderHubSchema {
   >];
 
   // ---- one typed table per event type (class-table inheritance) ----
-  picking_events [label=<
-    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
-      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>picking_events</B></FONT></TD></TR>
-      <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
-      <TR><TD ALIGN="LEFT"><I>tree_id</I> (FK)</TD></TR>
-      <TR><TD ALIGN="LEFT">weight_kg</TD></TR>
-    </TABLE>
-  >];
-
   juicing_events [label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
       <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>juicing_events</B></FONT></TD></TR>
       <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
-      <TR><TD ALIGN="LEFT">input_weight_kg</TD></TR>
       <TR><TD ALIGN="LEFT">output_volume_l</TD></TR>
-      <TR><TD ALIGN="LEFT">yield_pct</TD></TR>
-      <TR><TD ALIGN="LEFT">equipment</TD></TR>
+      <TR><TD ALIGN="LEFT">yield_pct (nullable)</TD></TR>
+      <TR><TD ALIGN="LEFT">equipment (nullable)</TD></TR>
+    </TABLE>
+  >];
+
+  juicing_tree_weights [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
+      <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>juicing_tree_weights</B></FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>event_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT"><I>tree_id</I> (FK)</TD></TR>
+      <TR><TD ALIGN="LEFT">weight_kg (nullable)</TD></TR>
     </TABLE>
   >];
 
@@ -145,10 +145,10 @@ digraph CiderHubSchema {
   // ---- relations ----
   seasons -> batches [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
   batches -> events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
-  trees -> picking_events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+  trees -> juicing_tree_weights [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
+  juicing_events -> juicing_tree_weights [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
   sensors -> sensor_readings [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
 
-  events -> picking_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
   events -> juicing_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
   events -> additive_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
   events -> measurement_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
@@ -157,5 +157,5 @@ digraph CiderHubSchema {
   events -> note_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
 
   { rank=same; seasons; trees; }
-  { rank=same; picking_events; juicing_events; additive_events; measurement_events; racking_events; bottling_events; note_events; }
+  { rank=same; juicing_events; additive_events; measurement_events; racking_events; bottling_events; note_events; }
 }
