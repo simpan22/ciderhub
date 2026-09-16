@@ -91,6 +91,18 @@ a:hover {
     color: var(--color-muted);
 }
 
+.card > summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+}
+
+.card[open] > summary {
+    margin-bottom: 1rem;
+}
+
 .ok {
     color: var(--color-accent);
 }
@@ -122,6 +134,7 @@ input, select, textarea {
 
 button {
     font: inherit;
+    line-height: 1.2;
     padding: 0.45rem 0.9rem;
     border: 1px solid var(--color-brand);
     border-radius: 4px;

@@ -11,8 +11,8 @@
 
 {% include "batches/_timeline.html" %}
 
-<section class="card">
-    <h2>Log picking</h2>
+<details class="card">
+    <summary>Log picking</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/picking" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Month
@@ -34,10 +34,10 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 
-<section class="card">
-    <h2>Log juicing</h2>
+<details class="card">
+    <summary>Log juicing</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/juicing" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Month
@@ -54,10 +54,10 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 
-<section class="card">
-    <h2>Log additive</h2>
+<details class="card">
+    <summary>Log additive</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/additive" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
@@ -67,10 +67,10 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 
-<section class="card">
-    <h2>Log measurement</h2>
+<details class="card">
+    <summary>Log measurement</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/measurement" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
@@ -82,10 +82,10 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 
-<section class="card">
-    <h2>Log racking</h2>
+<details class="card">
+    <summary>Log racking</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/racking" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
@@ -94,10 +94,10 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 
-<section class="card">
-    <h2>Log bottling</h2>
+<details class="card">
+    <summary>Log bottling</summary>
     <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/bottling" hx-target="#batch-timeline" hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful) this.reset()">
         <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
@@ -107,5 +107,5 @@
         <label>Notes <input type="text" name="notes"></label>
         <button type="submit">Add</button>
     </form>
-</section>
+</details>
 {% endblock %}
