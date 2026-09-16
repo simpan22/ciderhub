@@ -134,8 +134,9 @@ input, select, textarea {
 
 button {
     font: inherit;
+    font-size: 0.9rem;
     line-height: 1.2;
-    padding: 0.45rem 0.9rem;
+    padding: 0.35rem 0.75rem;
     border: 1px solid var(--color-brand);
     border-radius: 4px;
     background: var(--color-brand);
@@ -195,7 +196,13 @@ button.danger {
 
 .table td.actions {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+}
+
+.table td.actions button {
+    padding: 0.2rem 0.55rem;
+    font-size: 0.82rem;
 }
 
 .status {
