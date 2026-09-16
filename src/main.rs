@@ -84,7 +84,9 @@ async fn main() -> anyhow::Result<()> {
             "/batches/{id}/events/bottling",
             axum::routing::post(handlers::batches::add_bottling),
         )
+        .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))
+        .layer(axum::middleware::from_fn(handlers::auth::require_auth))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

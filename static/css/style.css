@@ -277,3 +277,41 @@ button.danger {
     font-weight: 600;
     margin-right: 0.5rem;
 }
+
+/* Password overlay */
+
+.lock-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(36, 33, 29, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 100;
+}
+
+.lock-overlay__card {
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+    margin-top: 0;
+}
+
+.lock-overlay__card form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-top: 1rem;
+    text-align: left;
+}
+
+.lock-overlay__card button {
+    align-self: center;
+}
+
+.lock-overlay__error {
+    color: #a33;
+    font-size: 0.9rem;
+    margin: 0;
+}
