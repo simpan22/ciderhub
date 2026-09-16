@@ -22,17 +22,6 @@ where
     }
 }
 
-pub fn empty_id_as_none<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: Option<String> = Option::deserialize(deserializer)?;
-    match value.filter(|s| !s.trim().is_empty()) {
-        Some(s) => s.parse::<i64>().map(Some).map_err(serde::de::Error::custom),
-        None => Ok(None),
-    }
-}
-
 #[derive(sqlx::FromRow)]
 pub struct Season {
     pub id: i64,
@@ -67,25 +56,6 @@ pub struct TreeForm {
     pub notes: Option<String>,
 }
 
-#[derive(sqlx::FromRow)]
-pub struct Vessel {
-    pub id: i64,
-    pub name: String,
-    pub capacity_l: Option<f64>,
-    pub kind: String,
-    pub active: bool,
-}
-
-#[derive(Deserialize)]
-pub struct VesselForm {
-    pub name: String,
-    #[serde(deserialize_with = "empty_number_as_none", default)]
-    pub capacity_l: Option<f64>,
-    pub kind: String,
-    #[serde(default)]
-    pub active: Option<String>, // present ("on") when the checkbox is checked
-}
-
 // Built by hand in the handler (not `query_as!`), since `status` is
 // computed from the batch's events rather than fetched from a column.
 pub struct BatchListItem {
@@ -94,7 +64,6 @@ pub struct BatchListItem {
     pub name: Option<String>,
     pub status: &'static str,
     pub season_year: i64,
-    pub vessel_name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -103,8 +72,6 @@ pub struct NewBatchForm {
     pub code: String,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub name: Option<String>,
-    #[serde(deserialize_with = "empty_id_as_none", default)]
-    pub vessel_id: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub started_on: Option<String>,
 }
@@ -113,8 +80,6 @@ pub struct NewBatchForm {
 pub struct UpdateBatchForm {
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub name: Option<String>,
-    #[serde(deserialize_with = "empty_id_as_none", default)]
-    pub vessel_id: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }
@@ -193,4 +158,25 @@ pub struct AddMeasurementForm {
 pub struct TreeYield {
     pub tree_name: String,
     pub total_kg: f64,
+}
+
+#[derive(Deserialize)]
+pub struct AddRackingForm {
+    pub occurred_at: String,
+    pub volume_l: f64,
+    #[serde(deserialize_with = "empty_number_as_none", default)]
+    pub loss_l: Option<f64>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct AddBottlingForm {
+    pub occurred_at: String,
+    pub bottle_count: i64,
+    pub bottle_size_ml: i64,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub carbonation_method: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
 }

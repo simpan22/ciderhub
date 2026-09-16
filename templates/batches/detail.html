@@ -83,4 +83,29 @@
         <button type="submit">Add</button>
     </form>
 </section>
+
+<section class="card">
+    <h2>Log racking</h2>
+    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/racking" hx-target="#batch-timeline" hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful) this.reset()">
+        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+        <label>Volume (L) <input type="number" step="0.1" min="0" name="volume_l" required></label>
+        <label>Loss (L) <input type="number" step="0.1" min="0" name="loss_l"></label>
+        <label>Notes <input type="text" name="notes"></label>
+        <button type="submit">Add</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Log bottling</h2>
+    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/bottling" hx-target="#batch-timeline" hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful) this.reset()">
+        <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+        <label>Bottle count <input type="number" min="1" name="bottle_count" required></label>
+        <label>Bottle size (ml) <input type="number" min="1" name="bottle_size_ml" placeholder="750" required></label>
+        <label>Carbonation method <input type="text" name="carbonation_method" placeholder="priming sugar, forced..."></label>
+        <label>Notes <input type="text" name="notes"></label>
+        <button type="submit">Add</button>
+    </form>
+</section>
 {% endblock %}

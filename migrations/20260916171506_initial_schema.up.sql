@@ -16,29 +16,21 @@ CREATE TABLE trees (
     notes      TEXT
 );
 
-CREATE TABLE vessels (
-    id          INTEGER PRIMARY KEY,
-    name        TEXT NOT NULL UNIQUE,
-    capacity_l  REAL,
-    kind        TEXT NOT NULL,
-    active      INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
-);
-
 -- No status column: a batch's status is derived from which event types
 -- it has logged (see compute_status in src/handlers/batches.rs), not
 -- stored, so it can never drift out of sync with the actual event log.
+-- No vessel tracking either: which physical container a batch sits in
+-- isn't worth recording until bottling, which is its own event type.
 CREATE TABLE batches (
     id         INTEGER PRIMARY KEY,
     season_id  INTEGER NOT NULL REFERENCES seasons (id),
     code       TEXT NOT NULL UNIQUE,
     name       TEXT,
-    vessel_id  INTEGER REFERENCES vessels (id),
     started_on TEXT,
     notes      TEXT
 );
 
 CREATE INDEX idx_batches_season ON batches (season_id);
-CREATE INDEX idx_batches_vessel ON batches (vessel_id);
 
 -- Events: a thin spine shared by every typed event table below.
 
@@ -91,12 +83,12 @@ CREATE TABLE measurement_events (
     tasting_notes    TEXT
 );
 
+-- Just the transfer itself (volume moved, volume lost to sediment) —
+-- no vessel reference, since vessels aren't tracked as entities.
 CREATE TABLE racking_events (
-    event_id       INTEGER PRIMARY KEY REFERENCES events (id) ON DELETE CASCADE,
-    from_vessel_id INTEGER REFERENCES vessels (id),
-    to_vessel_id   INTEGER NOT NULL REFERENCES vessels (id),
-    volume_l       REAL NOT NULL CHECK (volume_l > 0),
-    loss_l         REAL
+    event_id INTEGER PRIMARY KEY REFERENCES events (id) ON DELETE CASCADE,
+    volume_l REAL NOT NULL CHECK (volume_l > 0),
+    loss_l   REAL
 );
 
 CREATE TABLE bottling_events (

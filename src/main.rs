@@ -51,16 +51,6 @@ async fn main() -> anyhow::Result<()> {
             axum::routing::put(handlers::trees::update).delete(handlers::trees::delete),
         )
         .route(
-            "/vessels",
-            get(handlers::vessels::list).post(handlers::vessels::create),
-        )
-        .route("/vessels/table", get(handlers::vessels::table_fragment))
-        .route("/vessels/{id}/edit", get(handlers::vessels::edit_fragment))
-        .route(
-            "/vessels/{id}",
-            axum::routing::put(handlers::vessels::update).delete(handlers::vessels::delete),
-        )
-        .route(
             "/batches",
             get(handlers::batches::list).post(handlers::batches::create),
         )
@@ -85,6 +75,14 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/batches/{id}/events/measurement",
             axum::routing::post(handlers::batches::add_measurement),
+        )
+        .route(
+            "/batches/{id}/events/racking",
+            axum::routing::post(handlers::batches::add_racking),
+        )
+        .route(
+            "/batches/{id}/events/bottling",
+            axum::routing::post(handlers::batches::add_bottling),
         )
         .nest_service("/static", ServeDir::new("static"))
         .layer(TraceLayer::new_for_http())

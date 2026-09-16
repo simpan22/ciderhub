@@ -18,14 +18,6 @@
     </label>
     <label>Code <input type="text" name="code" placeholder="2026-A" required></label>
     <label>Name <input type="text" name="name" placeholder="optional, e.g. Bramley blend"></label>
-    <label>Vessel
-        <select name="vessel_id">
-            <option value="">— unassigned —</option>
-            {% for v in vessels %}
-            <option value="{{ v.id }}">{{ v.name }}</option>
-            {% endfor %}
-        </select>
-    </label>
     <label>Started on <input type="date" name="started_on" value="{{ today }}"></label>
     <button type="submit">Create</button>
 </form>
@@ -36,7 +28,6 @@
             <th>Code</th>
             <th>Name</th>
             <th>Season</th>
-            <th>Vessel</th>
             <th>Status</th>
         </tr>
     </thead>
@@ -46,7 +37,6 @@
             <td><a href="/batches/{{ b.id }}">{{ b.code }}</a></td>
             <td>{{ b.name.as_deref().unwrap_or("—") }}</td>
             <td>{{ b.season_year }}</td>
-            <td>{{ b.vessel_name.as_deref().unwrap_or("—") }}</td>
             <td><span class="status">{{ b.status }}</span></td>
         </tr>
         {% endfor %}

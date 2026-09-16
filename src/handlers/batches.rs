@@ -8,8 +8,9 @@ use axum::Form;
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{
-    AddAdditiveForm, AddJuicingForm, AddMeasurementForm, AddPickingForm, BatchListItem,
-    MonthOption, NewBatchForm, Season, TimelineRow, Tree, TreeYield, UpdateBatchForm, Vessel,
+    AddAdditiveForm, AddBottlingForm, AddJuicingForm, AddMeasurementForm, AddPickingForm,
+    AddRackingForm, BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree,
+    TreeYield, UpdateBatchForm,
 };
 use crate::state::AppState;
 
@@ -41,19 +42,12 @@ fn compute_status<'a>(event_types: impl IntoIterator<Item = &'a str>) -> &'stati
     }
 }
 
-pub struct VesselOption {
-    pub id: i64,
-    pub name: String,
-    pub selected: bool,
-}
-
 pub struct BatchDetail {
     pub id: i64,
     pub code: String,
     pub name: Option<String>,
     pub status: &'static str,
     pub season_year: i64,
-    pub vessel_name: Option<String>,
     pub notes: Option<String>,
 }
 
@@ -62,7 +56,6 @@ pub struct BatchDetail {
 struct ListTemplate {
     batches: Vec<BatchListItem>,
     seasons: Vec<Season>,
-    vessels: Vec<Vessel>,
     today: String,
 }
 
@@ -70,7 +63,6 @@ struct ListTemplate {
 #[template(path = "batches/_meta.html")]
 struct MetaTemplate {
     batch: BatchDetail,
-    vessels: Vec<VesselOption>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -88,7 +80,6 @@ struct TimelineTemplate {
 #[template(path = "batches/detail.html")]
 struct DetailTemplate {
     batch: BatchDetail,
-    vessels: Vec<VesselOption>,
     tree_yields: Vec<TreeYield>,
     timeline: Vec<TimelineRow>,
     trees: Vec<Tree>,
@@ -101,15 +92,6 @@ async fn fetch_seasons(db: &sqlx::SqlitePool) -> Result<Vec<Season>, sqlx::Error
     sqlx::query_as!(Season, r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
         .fetch_all(db)
         .await
-}
-
-async fn fetch_vessels(db: &sqlx::SqlitePool) -> Result<Vec<Vessel>, sqlx::Error> {
-    sqlx::query_as!(
-        Vessel,
-        r#"SELECT id as "id!", name, capacity_l, kind, active as "active: bool" FROM vessels ORDER BY name"#
-    )
-    .fetch_all(db)
-    .await
 }
 
 async fn fetch_trees(db: &sqlx::SqlitePool) -> Result<Vec<Tree>, sqlx::Error> {
@@ -146,11 +128,9 @@ async fn fetch_season_year(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Optio
 async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplate>, sqlx::Error> {
     let row = sqlx::query!(
         r#"
-        SELECT b.id, b.code, b.name, b.vessel_id, b.notes,
-               s.year as season_year, v.name as "vessel_name?"
+        SELECT b.id, b.code, b.name, b.notes, s.year as season_year
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
-        LEFT JOIN vessels v ON v.id = b.vessel_id
         WHERE b.id = ?
         "#,
         id
@@ -163,7 +143,6 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
     };
 
     let event_types = fetch_event_types(db, id).await?;
-    let all_vessels = fetch_vessels(db).await?;
 
     let batch = BatchDetail {
         id: row.id,
@@ -171,20 +150,10 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
         name: row.name,
         status: compute_status(event_types.iter().map(String::as_str)),
         season_year: row.season_year,
-        vessel_name: row.vessel_name,
         notes: row.notes,
     };
 
-    let vessels = all_vessels
-        .into_iter()
-        .map(|v| VesselOption {
-            selected: Some(v.id) == row.vessel_id,
-            id: v.id,
-            name: v.name,
-        })
-        .collect();
-
-    Ok(Some(MetaTemplate { batch, vessels }))
+    Ok(Some(MetaTemplate { batch }))
 }
 
 async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<TimelineTemplate, sqlx::Error> {
@@ -230,6 +199,30 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         SELECT e.occurred_at, e.notes, ae.substance, ae.amount, ae.unit
         FROM additive_events ae
         JOIN events e ON e.id = ae.event_id
+        WHERE e.batch_id = ?
+        "#,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    let rackings = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, e.notes, re.volume_l, re.loss_l
+        FROM racking_events re
+        JOIN events e ON e.id = re.event_id
+        WHERE e.batch_id = ?
+        "#,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    let bottlings = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, e.notes, be.bottle_count, be.bottle_size_ml, be.carbonation_method
+        FROM bottling_events be
+        JOIN events e ON e.id = be.event_id
         WHERE e.batch_id = ?
         "#,
         batch_id
@@ -334,6 +327,36 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         });
     }
 
+    for r in rackings {
+        let mut summary = format!("Racked {:.1} L", r.volume_l);
+        if let Some(loss) = r.loss_l {
+            summary.push_str(&format!(" (lost {loss:.1} L)"));
+        }
+        if let Some(notes) = r.notes.filter(|n| !n.is_empty()) {
+            summary.push_str(&format!(" — {notes}"));
+        }
+        timeline.push(TimelineRow {
+            occurred_at: r.occurred_at,
+            kind_label: "Racking",
+            summary,
+        });
+    }
+
+    for b in bottlings {
+        let mut summary = format!("{} × {} ml bottles", b.bottle_count, b.bottle_size_ml);
+        if let Some(method) = b.carbonation_method.filter(|m| !m.is_empty()) {
+            summary.push_str(&format!(" ({method})"));
+        }
+        if let Some(notes) = b.notes.filter(|n| !n.is_empty()) {
+            summary.push_str(&format!(" — {notes}"));
+        }
+        timeline.push(TimelineRow {
+            occurred_at: b.occurred_at,
+            kind_label: "Bottling",
+            summary,
+        });
+    }
+
     timeline.sort_by(|a, b| a.occurred_at.cmp(&b.occurred_at));
 
     Ok(TimelineTemplate {
@@ -345,10 +368,9 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
 pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let rows = sqlx::query!(
         r#"
-        SELECT b.id, b.code, b.name, s.year as season_year, v.name as "vessel_name?"
+        SELECT b.id, b.code, b.name, s.year as season_year
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
-        LEFT JOIN vessels v ON v.id = b.vessel_id
         ORDER BY b.started_on DESC, b.code
         "#
     )
@@ -379,18 +401,15 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
                 code: row.code,
                 name: row.name,
                 season_year: row.season_year,
-                vessel_name: row.vessel_name,
             }
         })
         .collect();
 
     let seasons = fetch_seasons(&state.db).await?;
-    let vessels = fetch_vessels(&state.db).await?;
 
     Ok(ListTemplate {
         batches,
         seasons,
-        vessels,
         today: dates::today_iso(),
     })
 }
@@ -400,11 +419,10 @@ pub async fn create(
     Form(form): Form<NewBatchForm>,
 ) -> Result<impl IntoResponse, AppError> {
     let result = sqlx::query!(
-        "INSERT INTO batches (season_id, code, name, vessel_id, started_on) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO batches (season_id, code, name, started_on) VALUES (?, ?, ?, ?)",
         form.season_id,
         form.code,
         form.name,
-        form.vessel_id,
         form.started_on
     )
     .execute(&state.db)
@@ -425,7 +443,6 @@ pub async fn detail(
 
     Ok(DetailTemplate {
         batch: meta.batch,
-        vessels: meta.vessels,
         tree_yields: timeline.tree_yields,
         timeline: timeline.timeline,
         trees,
@@ -442,9 +459,8 @@ pub async fn update(
     Form(form): Form<UpdateBatchForm>,
 ) -> Result<Response, AppError> {
     sqlx::query!(
-        "UPDATE batches SET name = ?, vessel_id = ?, notes = ? WHERE id = ?",
+        "UPDATE batches SET name = ?, notes = ? WHERE id = ?",
         form.name,
-        form.vessel_id,
         form.notes,
         id
     )
@@ -614,6 +630,73 @@ pub async fn add_measurement(
         form.temperature_c,
         form.volume_l,
         form.tasting_notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    let timeline = fetch_timeline(&state.db, id).await?;
+    Ok(timeline)
+}
+
+pub async fn add_racking(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddRackingForm>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    let event = sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'racking', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let event_id = event.last_insert_rowid();
+
+    sqlx::query!(
+        "INSERT INTO racking_events (event_id, volume_l, loss_l) VALUES (?, ?, ?)",
+        event_id,
+        form.volume_l,
+        form.loss_l
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    let timeline = fetch_timeline(&state.db, id).await?;
+    Ok(timeline)
+}
+
+pub async fn add_bottling(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddBottlingForm>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    let event = sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'bottling', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let event_id = event.last_insert_rowid();
+
+    sqlx::query!(
+        "INSERT INTO bottling_events (event_id, bottle_count, bottle_size_ml, carbonation_method) VALUES (?, ?, ?, ?)",
+        event_id,
+        form.bottle_count,
+        form.bottle_size_ml,
+        form.carbonation_method
     )
     .execute(&mut *tx)
     .await?;

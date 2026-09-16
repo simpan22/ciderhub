@@ -24,17 +24,6 @@ digraph CiderHubSchema {
     </TABLE>
   >];
 
-  vessels [label=<
-    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
-      <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>vessels</B></FONT></TD></TR>
-      <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
-      <TR><TD ALIGN="LEFT">name</TD></TR>
-      <TR><TD ALIGN="LEFT">capacity_l</TD></TR>
-      <TR><TD ALIGN="LEFT">kind</TD></TR>
-      <TR><TD ALIGN="LEFT">active</TD></TR>
-    </TABLE>
-  >];
-
   batches [label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
       <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>batches</B></FONT></TD></TR>
@@ -42,7 +31,6 @@ digraph CiderHubSchema {
       <TR><TD ALIGN="LEFT"><I>season_id</I> (FK)</TD></TR>
       <TR><TD ALIGN="LEFT">code</TD></TR>
       <TR><TD ALIGN="LEFT">name (nullable)</TD></TR>
-      <TR><TD ALIGN="LEFT"><I>vessel_id</I> (FK, nullable)</TD></TR>
       <TR><TD ALIGN="LEFT">started_on</TD></TR>
       <TR><TD ALIGN="LEFT">notes</TD></TR>
     </TABLE>
@@ -108,10 +96,8 @@ digraph CiderHubSchema {
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
       <TR><TD BGCOLOR="#3d5a73" ALIGN="CENTER"><FONT COLOR="white"><B>racking_events</B></FONT></TD></TR>
       <TR><TD ALIGN="LEFT"><B><I>event_id</I></B> (PK, FK)</TD></TR>
-      <TR><TD ALIGN="LEFT"><I>from_vessel_id</I> (FK, nullable)</TD></TR>
-      <TR><TD ALIGN="LEFT"><I>to_vessel_id</I> (FK)</TD></TR>
       <TR><TD ALIGN="LEFT">volume_l</TD></TR>
-      <TR><TD ALIGN="LEFT">loss_l</TD></TR>
+      <TR><TD ALIGN="LEFT">loss_l (nullable)</TD></TR>
     </TABLE>
   >];
 
@@ -158,10 +144,8 @@ digraph CiderHubSchema {
 
   // ---- relations ----
   seasons -> batches [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
-  vessels -> batches [label="1:N (nullable)", arrowhead=crow, dir=both, arrowtail=none];
   batches -> events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
   trees -> picking_events [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
-  vessels -> racking_events [label="1:N (from/to)", arrowhead=crow, dir=both, arrowtail=none];
   sensors -> sensor_readings [label="1:N", arrowhead=crow, dir=both, arrowtail=none];
 
   events -> picking_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
@@ -172,6 +156,6 @@ digraph CiderHubSchema {
   events -> bottling_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
   events -> note_events [label="1:1", arrowhead=none, arrowtail=none, style=bold, color="#2c3e50"];
 
-  { rank=same; seasons; trees; vessels; }
+  { rank=same; seasons; trees; }
   { rank=same; picking_events; juicing_events; additive_events; measurement_events; racking_events; bottling_events; note_events; }
 }

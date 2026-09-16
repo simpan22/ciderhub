@@ -54,11 +54,11 @@ Core entities:
   - `measurement` — a point-in-time reading tied to a batch: specific
     gravity, pH, temperature, volume, tasting notes (ABV is calculated
     from two gravity measurements, not stored).
-  - `racking` — transfer between vessels, with volume/loss.
+  - `racking` — transfer between containers, with volume moved and
+    volume lost to sediment. Which physical vessel isn't tracked (see
+    note below) — just the transfer itself.
   - `bottling` — final packaging (bottle count/size, carbonation method).
   - `note` — free-text log entry with optional photo.
-- **Vessel** — a fermenter/carboy/tank, so batches can be tracked as
-  occupying physical equipment over time.
 - **Sensor** — a registered device (id, location/label, type of readings
   it produces).
 - **SensorReading** — a high-frequency, structured time-series row
@@ -68,10 +68,15 @@ Core entities:
 Relationships: a `Batch` has many `Event`s; a `picking` event references
 exactly one `Tree`, so a `Batch`'s tree composition falls out of its
 picking events (many-to-many via the event log, not a separate join
-table); a `Batch` occupies a `Vessel` over a date range; `SensorReading`s
-belong to a `Sensor`, and a `Sensor` can optionally be associated with a
-`Vessel` or a general location (e.g. "fermentation room") rather than a
-specific batch.
+table); `SensorReading`s belong to a `Sensor`, and a `Sensor` can
+optionally be associated with a general location (e.g. "fermentation
+room") rather than a specific batch.
+
+No Vessel entity: which physical fermenter/carboy a batch sits in isn't
+worth tracking as first-class data — it doesn't matter until bottling,
+which is already its own event type. If that changes later (e.g. multiple
+concurrent batches sharing limited equipment becomes worth planning
+around), a Vessel entity can be reintroduced then.
 
 ## 3. Architecture
 
@@ -140,12 +145,9 @@ trees(
   location, notes
 )
 
-vessels(id, name, capacity_l, kind, active)
-
 -- No status column: derived from the batch's logged event types.
 batches(
-  id, season_id, code, name NULL,
-  vessel_id NULL, started_on, notes
+  id, season_id, code, name NULL, started_on, notes
 )
 
 -- Thin spine: shared identity, batch association, ordering, and a
@@ -182,9 +184,7 @@ measurement_events(
 
 racking_events(
   event_id PK/FK -> events.id,
-  from_vessel_id FK NULL -> vessels.id,
-  to_vessel_id FK -> vessels.id,
-  volume_l, loss_l
+  volume_l, loss_l NULL
 )
 
 bottling_events(
@@ -228,10 +228,9 @@ Design notes:
 - `sensor_readings` is intentionally separate from `events`: different
   volume profile (thousands of rows/day vs. a handful), different
   retention/rollup strategy, and no per-row user authorship.
-- `batches.name` is nullable, `vessel_id` and `trees.planted_on` stay
-  nullable too — a batch is identified by its `code`, not a display
-  name; not every batch sits in a notable vessel; not every tree's
-  planting year is known. None of these should block data entry.
+- `batches.name` and `trees.planted_on` are nullable — a batch is
+  identified by its `code`, not a display name, and not every tree's
+  planting year is known. Neither should block data entry.
 
 ## 5. Roadmap
 
@@ -241,7 +240,7 @@ Design notes:
 - Base layout template + minimal CSS.
 
 **Phase 1 — Core logging (MVP)**
-- CRUD for Seasons, Trees, Vessels, Batches.
+- CRUD for Seasons, Trees, Batches.
 - Batch detail page showing a chronological event timeline and a summary
   of which trees contributed (derived from its `picking` events).
 - Log a `picking` event (tree, weight) — a batch can have several, one
@@ -251,11 +250,13 @@ Design notes:
   campden, etc.).
 - Log a `measurement` event (specific gravity, pH, temp, tasting notes);
   ABV is computed on read from two gravity measurements, not stored.
+- Log a `racking` event (volume moved, volume lost) and a `bottling`
+  event (bottle count/size, carbonation method) — all seven event types
+  from §2 are now logged; status derivation already covers the
+  resulting `conditioning`/`bottled` states.
 - htmx-powered inline "add event" forms on the batch page (no reload).
 
 **Phase 2 — Batch lifecycle & reporting**
-- Racking and bottling event types (status derivation already covers
-  the resulting `conditioning`/`bottled` states once these exist).
 - Gravity/ABV curve chart per batch (server-rendered SVG).
 - Season/batch overview dashboard (active batches, recent events).
 - Search/filter across batches and events.
