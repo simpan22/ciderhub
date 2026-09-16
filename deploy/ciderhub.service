@@ -1,0 +1,23 @@
+[Unit]
+Description=CiderHub
+After=network.target
+
+[Service]
+Type=simple
+User=ciderhub
+Group=ciderhub
+WorkingDirectory=/opt/ciderhub
+EnvironmentFile=/etc/ciderhub/ciderhub.env
+ExecStart=/opt/ciderhub/ciderhub
+Restart=on-failure
+RestartSec=2
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ciderhub
+
+[Install]
+WantedBy=multi-user.target

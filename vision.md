@@ -127,11 +127,19 @@ around), a Vessel entity can be reintroduced then.
   interactivity is needed later.
 
 **Deployment**
-- Single statically-linked binary + a SQLite file + a `migrations/`
-  directory alongside it.
-- Runs as a `systemd` unit on a small home server / Raspberry Pi.
-- Backups: periodic copy of the SQLite file (litestream is an option
-  later for continuous replication, not needed for v1).
+- Live at https://cider.simonochamanda.se, on a Hetzner box Simon
+  already runs other services on (nginx, other sites, a game server).
+  Migrations are embedded in the binary (`sqlx::migrate!`), so only
+  the binary + `static/` need to reach the server — see `deploy/`.
+- Runs as a `systemd` unit (dedicated `ciderhub` system user), bound to
+  `127.0.0.1:8091`, reverse-proxied and TLS-terminated by the box's
+  existing nginx. Cert via the certbot already set up there (Let's
+  Encrypt, auto-renewing).
+- No Docker, no build-on-server: built locally (glibc build, matched
+  OS/glibc version with the server) and shipped with `deploy/deploy.sh`.
+- Backups: not yet automated (see `deploy/README.md`) — periodic copy
+  of the SQLite file is the natural next step (litestream is an option
+  later for continuous replication, not needed yet).
 
 ## 4. Data Model Sketch (SQLite)
 
