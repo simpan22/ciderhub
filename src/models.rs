@@ -159,6 +159,20 @@ pub struct MonthOption {
     pub selected: bool,
 }
 
+// Unlike picking/juicing, additives (yeast, nutrients, campden,
+// potassium sorbate before bottling, ...) aren't guaranteed to fall
+// within the harvest season year, so this takes a full date like
+// measurement does.
+#[derive(Deserialize)]
+pub struct AddAdditiveForm {
+    pub occurred_at: String,
+    pub substance: String,
+    pub amount: f64,
+    pub unit: String,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}
+
 #[derive(Deserialize)]
 pub struct AddMeasurementForm {
     pub occurred_at: String,

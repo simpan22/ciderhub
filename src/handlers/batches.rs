@@ -8,8 +8,8 @@ use axum::Form;
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{
-    AddJuicingForm, AddMeasurementForm, AddPickingForm, BatchListItem, MonthOption, NewBatchForm,
-    Season, TimelineRow, Tree, TreeYield, UpdateBatchForm, Vessel,
+    AddAdditiveForm, AddJuicingForm, AddMeasurementForm, AddPickingForm, BatchListItem,
+    MonthOption, NewBatchForm, Season, TimelineRow, Tree, TreeYield, UpdateBatchForm, Vessel,
 };
 use crate::state::AppState;
 
@@ -225,6 +225,18 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
     .fetch_all(db)
     .await?;
 
+    let additives = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, e.notes, ae.substance, ae.amount, ae.unit
+        FROM additive_events ae
+        JOIN events e ON e.id = ae.event_id
+        WHERE e.batch_id = ?
+        "#,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
     let tree_yields = sqlx::query_as!(
         TreeYield,
         r#"
@@ -274,6 +286,18 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         timeline.push(TimelineRow {
             occurred_at: j.occurred_at,
             kind_label: "Juicing",
+            summary,
+        });
+    }
+
+    for a in additives {
+        let mut summary = format!("{} {} {}", a.amount, a.unit, a.substance);
+        if let Some(notes) = a.notes.filter(|n| !n.is_empty()) {
+            summary.push_str(&format!(" — {notes}"));
+        }
+        timeline.push(TimelineRow {
+            occurred_at: a.occurred_at,
+            kind_label: "Additive",
             summary,
         });
     }
@@ -520,6 +544,40 @@ pub async fn add_juicing(
         form.output_volume_l,
         yield_pct,
         form.equipment
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    let timeline = fetch_timeline(&state.db, id).await?;
+    Ok(timeline)
+}
+
+pub async fn add_additive(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddAdditiveForm>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    let event = sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'additive', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let event_id = event.last_insert_rowid();
+
+    sqlx::query!(
+        "INSERT INTO additive_events (event_id, substance, amount, unit) VALUES (?, ?, ?, ?)",
+        event_id,
+        form.substance,
+        form.amount,
+        form.unit
     )
     .execute(&mut *tx)
     .await?;

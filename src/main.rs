@@ -79,6 +79,10 @@ async fn main() -> anyhow::Result<()> {
             axum::routing::post(handlers::batches::add_juicing),
         )
         .route(
+            "/batches/{id}/events/additive",
+            axum::routing::post(handlers::batches::add_additive),
+        )
+        .route(
             "/batches/{id}/events/measurement",
             axum::routing::post(handlers::batches::add_measurement),
         )

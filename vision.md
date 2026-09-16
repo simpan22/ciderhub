@@ -247,6 +247,8 @@ Design notes:
 - Log a `picking` event (tree, weight) — a batch can have several, one
   per tree it drew fruit from.
 - Log a `juicing` event (input/output, computed yield %).
+- Log an `additive` event (substance, amount, unit — yeast, nutrients,
+  campden, etc.).
 - Log a `measurement` event (specific gravity, pH, temp, tasting notes);
   ABV is computed on read from two gravity measurements, not stored.
 - htmx-powered inline "add event" forms on the batch page (no reload).
