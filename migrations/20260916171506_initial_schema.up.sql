@@ -24,13 +24,14 @@ CREATE TABLE vessels (
     active      INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
 );
 
+-- No status column: a batch's status is derived from which event types
+-- it has logged (see compute_status in src/handlers/batches.rs), not
+-- stored, so it can never drift out of sync with the actual event log.
 CREATE TABLE batches (
     id         INTEGER PRIMARY KEY,
     season_id  INTEGER NOT NULL REFERENCES seasons (id),
     code       TEXT NOT NULL UNIQUE,
     name       TEXT,
-    status     TEXT NOT NULL DEFAULT 'planning'
-               CHECK (status IN ('planning', 'fermenting', 'conditioning', 'bottled', 'archived')),
     vessel_id  INTEGER REFERENCES vessels (id),
     started_on TEXT,
     notes      TEXT
@@ -50,6 +51,9 @@ CREATE TABLE events (
                     'racking', 'bottling', 'note'
                 )),
     occurred_at TEXT NOT NULL,
+    -- Free-text note on the event itself, common to every event type,
+    -- so it lives on the shared spine rather than duplicated per type.
+    notes       TEXT,
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 

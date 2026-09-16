@@ -86,12 +86,13 @@ pub struct VesselForm {
     pub active: Option<String>, // present ("on") when the checkbox is checked
 }
 
-#[derive(sqlx::FromRow)]
+// Built by hand in the handler (not `query_as!`), since `status` is
+// computed from the batch's events rather than fetched from a column.
 pub struct BatchListItem {
     pub id: i64,
     pub code: String,
     pub name: Option<String>,
-    pub status: String,
+    pub status: &'static str,
     pub season_year: i64,
     pub vessel_name: Option<String>,
 }
@@ -110,7 +111,6 @@ pub struct NewBatchForm {
 
 #[derive(Deserialize)]
 pub struct UpdateBatchForm {
-    pub status: String,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub name: Option<String>,
     #[serde(deserialize_with = "empty_id_as_none", default)]
@@ -128,20 +128,35 @@ pub struct TimelineRow {
     pub summary: String,
 }
 
+// Picking and juicing always happen within the batch's own harvest
+// season, so the form only asks for month/day — the year is derived
+// server-side from the batch's season.
 #[derive(Deserialize)]
 pub struct AddPickingForm {
-    pub occurred_at: String,
+    pub month: u32,
+    pub day: u32,
     pub tree_id: i64,
     pub weight_kg: f64,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct AddJuicingForm {
-    pub occurred_at: String,
+    pub month: u32,
+    pub day: u32,
     pub input_weight_kg: f64,
     pub output_volume_l: f64,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub equipment: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}
+
+pub struct MonthOption {
+    pub value: u32,
+    pub label: &'static str,
+    pub selected: bool,
 }
 
 #[derive(Deserialize)]
@@ -157,6 +172,8 @@ pub struct AddMeasurementForm {
     pub volume_l: Option<f64>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub tasting_notes: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
 }
 
 pub struct TreeYield {

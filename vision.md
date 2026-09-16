@@ -31,8 +31,10 @@ Core entities:
 - **Batch** — the central object. A batch of cider moving through
   picking → juicing → fermentation → bottling. Identified by its `code`
   (an optional descriptive name can be added too), belongs to a season,
-  has a status (e.g. `planning`, `fermenting`, `conditioning`, `bottled`,
-  `archived`), and free-text notes.
+  and has free-text notes. Status (`planning`, `fermenting`,
+  `conditioning`, `bottled`) is not a field to set — it's derived from
+  which event types the batch has logged, so it can never drift out of
+  sync with what actually happened.
 - **Tree** — a physical apple tree the user owns (label, variety —
   nullable, since several are of unknown type — planting year, location
   in the garden/orchard, notes). A fixed, small, manually-maintained
@@ -140,15 +142,17 @@ trees(
 
 vessels(id, name, capacity_l, kind, active)
 
+-- No status column: derived from the batch's logged event types.
 batches(
-  id, season_id, code, name NULL, status,
+  id, season_id, code, name NULL,
   vessel_id NULL, started_on, notes
 )
 
--- Thin spine: shared identity, batch association, and ordering for
--- every event type. Holds no type-specific data.
+-- Thin spine: shared identity, batch association, ordering, and a
+-- free-text note, common to every event type. Holds no other
+-- type-specific data.
 events(
-  id, batch_id, event_type, occurred_at, created_at
+  id, batch_id, event_type, occurred_at, notes NULL, created_at
 )
 
 -- One table per event type, each keyed 1:1 on events.id.
@@ -248,7 +252,8 @@ Design notes:
 - htmx-powered inline "add event" forms on the batch page (no reload).
 
 **Phase 2 — Batch lifecycle & reporting**
-- Racking and bottling event types; batch status transitions.
+- Racking and bottling event types (status derivation already covers
+  the resulting `conditioning`/`bottled` states once these exist).
 - Gravity/ABV curve chart per batch (server-rendered SVG).
 - Season/batch overview dashboard (active batches, recent events).
 - Search/filter across batches and events.
