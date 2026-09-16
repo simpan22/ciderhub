@@ -34,9 +34,9 @@ pub struct VesselOption {
 pub struct BatchDetail {
     pub id: i64,
     pub code: String,
-    pub name: String,
+    pub name: Option<String>,
     pub status: String,
-    pub season_name: String,
+    pub season_year: i64,
     pub vessel_name: Option<String>,
     pub notes: Option<String>,
 }
@@ -80,7 +80,7 @@ struct DetailTemplate {
 }
 
 async fn fetch_seasons(db: &sqlx::SqlitePool) -> Result<Vec<Season>, sqlx::Error> {
-    sqlx::query_as!(Season, "SELECT id, name, starts_on, ends_on FROM seasons ORDER BY starts_on DESC, name")
+    sqlx::query_as!(Season, r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
         .fetch_all(db)
         .await
 }
@@ -107,7 +107,7 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
     let row = sqlx::query!(
         r#"
         SELECT b.id, b.code, b.name, b.status, b.vessel_id, b.notes,
-               s.name as season_name, v.name as "vessel_name?"
+               s.year as season_year, v.name as "vessel_name?"
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
         LEFT JOIN vessels v ON v.id = b.vessel_id
@@ -129,7 +129,7 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
         code: row.code,
         name: row.name,
         status: row.status,
-        season_name: row.season_name,
+        season_year: row.season_year,
         vessel_name: row.vessel_name,
         notes: row.notes,
     };
@@ -282,7 +282,7 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
     let batches = sqlx::query_as!(
         BatchListItem,
         r#"
-        SELECT b.id, b.code, b.name, b.status, s.name as season_name, v.name as "vessel_name?"
+        SELECT b.id, b.code, b.name, b.status, s.year as season_year, v.name as "vessel_name?"
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
         LEFT JOIN vessels v ON v.id = b.vessel_id
@@ -347,8 +347,9 @@ pub async fn update(
     Form(form): Form<UpdateBatchForm>,
 ) -> Result<Response, AppError> {
     sqlx::query!(
-        "UPDATE batches SET status = ?, vessel_id = ?, notes = ? WHERE id = ?",
+        "UPDATE batches SET status = ?, name = ?, vessel_id = ?, notes = ? WHERE id = ?",
         form.status,
+        form.name,
         form.vessel_id,
         form.notes,
         id

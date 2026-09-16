@@ -1,7 +1,8 @@
 <section class="card" id="batch-meta">
     <h2>Batch details</h2>
-    <p class="muted">{{ batch.season_name }}{% if let Some(vessel_name) = batch.vessel_name %} · {{ vessel_name }}{% endif %}</p>
+    <p class="muted">{{ batch.season_year }}{% if let Some(vessel_name) = batch.vessel_name %} · {{ vessel_name }}{% endif %}</p>
     <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
+        <label>Name <input type="text" name="name" value="{{ batch.name.as_deref().unwrap_or("") }}" placeholder="optional"></label>
         <label>Status
             <select name="status">
                 {% for opt in statuses %}

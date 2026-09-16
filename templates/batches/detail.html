@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="page-header">
-    <h1>{{ batch.code }} — {{ batch.name }}</h1>
+    <h1>{{ batch.code }}{% if let Some(name) = batch.name %} — {{ name }}{% endif %}</h1>
 </section>
 
 {% include "batches/_meta.html" %}

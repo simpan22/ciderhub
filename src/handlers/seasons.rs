@@ -17,12 +17,9 @@ async fn fetch_rows(
     db: &sqlx::SqlitePool,
     editing_id: Option<i64>,
 ) -> Result<Vec<SeasonRow>, sqlx::Error> {
-    let seasons = sqlx::query_as!(
-        Season,
-        "SELECT id, name, starts_on, ends_on FROM seasons ORDER BY starts_on DESC, name"
-    )
-    .fetch_all(db)
-    .await?;
+    let seasons = sqlx::query_as!(Season, r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
+        .fetch_all(db)
+        .await?;
 
     Ok(seasons
         .into_iter()
@@ -67,14 +64,9 @@ pub async fn create(
     State(state): State<AppState>,
     Form(form): Form<SeasonForm>,
 ) -> Result<impl IntoResponse, AppError> {
-    sqlx::query!(
-        "INSERT INTO seasons (name, starts_on, ends_on) VALUES (?, ?, ?)",
-        form.name,
-        form.starts_on,
-        form.ends_on
-    )
-    .execute(&state.db)
-    .await?;
+    sqlx::query!("INSERT INTO seasons (year) VALUES (?)", form.year)
+        .execute(&state.db)
+        .await?;
 
     let rows = fetch_rows(&state.db, None).await?;
     Ok(TableBodyTemplate { rows })
@@ -86,10 +78,8 @@ pub async fn update(
     Form(form): Form<SeasonForm>,
 ) -> Result<impl IntoResponse, AppError> {
     sqlx::query!(
-        "UPDATE seasons SET name = ?, starts_on = ?, ends_on = ? WHERE id = ?",
-        form.name,
-        form.starts_on,
-        form.ends_on,
+        "UPDATE seasons SET year = ? WHERE id = ?",
+        form.year,
         id
     )
     .execute(&state.db)

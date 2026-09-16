@@ -36,17 +36,12 @@ where
 #[derive(sqlx::FromRow)]
 pub struct Season {
     pub id: i64,
-    pub name: String,
-    pub starts_on: String,
-    pub ends_on: Option<String>,
+    pub year: i64,
 }
 
 #[derive(Deserialize)]
 pub struct SeasonForm {
-    pub name: String,
-    pub starts_on: String,
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub ends_on: Option<String>,
+    pub year: i64,
 }
 
 #[derive(sqlx::FromRow)]
@@ -95,9 +90,9 @@ pub struct VesselForm {
 pub struct BatchListItem {
     pub id: i64,
     pub code: String,
-    pub name: String,
+    pub name: Option<String>,
     pub status: String,
-    pub season_name: String,
+    pub season_year: i64,
     pub vessel_name: Option<String>,
 }
 
@@ -105,7 +100,8 @@ pub struct BatchListItem {
 pub struct NewBatchForm {
     pub season_id: i64,
     pub code: String,
-    pub name: String,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub name: Option<String>,
     #[serde(deserialize_with = "empty_id_as_none", default)]
     pub vessel_id: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
@@ -115,6 +111,8 @@ pub struct NewBatchForm {
 #[derive(Deserialize)]
 pub struct UpdateBatchForm {
     pub status: String,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub name: Option<String>,
     #[serde(deserialize_with = "empty_id_as_none", default)]
     pub vessel_id: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none", default)]

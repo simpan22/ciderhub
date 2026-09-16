@@ -1,10 +1,10 @@
 -- Reference / core entities
 
+-- A season always runs calendar-year Jan 1 to Jan 1; no separate
+-- start/end dates to enter.
 CREATE TABLE seasons (
-    id         INTEGER PRIMARY KEY,
-    name       TEXT NOT NULL UNIQUE,
-    starts_on  TEXT NOT NULL,
-    ends_on    TEXT
+    id   INTEGER PRIMARY KEY,
+    year INTEGER NOT NULL UNIQUE
 );
 
 CREATE TABLE trees (
@@ -28,7 +28,7 @@ CREATE TABLE batches (
     id         INTEGER PRIMARY KEY,
     season_id  INTEGER NOT NULL REFERENCES seasons (id),
     code       TEXT NOT NULL UNIQUE,
-    name       TEXT NOT NULL,
+    name       TEXT,
     status     TEXT NOT NULL DEFAULT 'planning'
                CHECK (status IN ('planning', 'fermenting', 'conditioning', 'bottled', 'archived')),
     vessel_id  INTEGER REFERENCES vessels (id),

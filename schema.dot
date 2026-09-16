@@ -8,9 +8,7 @@ digraph CiderHubSchema {
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#8899aa">
       <TR><TD BGCOLOR="#2c3e50" ALIGN="CENTER"><FONT COLOR="white"><B>seasons</B></FONT></TD></TR>
       <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
-      <TR><TD ALIGN="LEFT">name</TD></TR>
-      <TR><TD ALIGN="LEFT">starts_on</TD></TR>
-      <TR><TD ALIGN="LEFT">ends_on</TD></TR>
+      <TR><TD ALIGN="LEFT">year</TD></TR>
     </TABLE>
   >];
 
@@ -43,7 +41,7 @@ digraph CiderHubSchema {
       <TR><TD ALIGN="LEFT"><B>id</B> (PK)</TD></TR>
       <TR><TD ALIGN="LEFT"><I>season_id</I> (FK)</TD></TR>
       <TR><TD ALIGN="LEFT">code</TD></TR>
-      <TR><TD ALIGN="LEFT">name</TD></TR>
+      <TR><TD ALIGN="LEFT">name (nullable)</TD></TR>
       <TR><TD ALIGN="LEFT">status</TD></TR>
       <TR><TD ALIGN="LEFT"><I>vessel_id</I> (FK, nullable)</TD></TR>
       <TR><TD ALIGN="LEFT">started_on</TD></TR>

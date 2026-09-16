@@ -26,11 +26,12 @@ Guiding principles:
 
 Core entities:
 
-- **Season** — a cider-making year/campaign (e.g. "2026"), mostly for
-  grouping and reporting.
+- **Season** — a cider-making campaign, always a calendar year (Jan 1 to
+  Jan 1) — just a year number, mostly for grouping and reporting.
 - **Batch** — the central object. A batch of cider moving through
-  picking → juicing → fermentation → bottling. Has a name/code, season,
-  status (e.g. `planning`, `fermenting`, `conditioning`, `bottled`,
+  picking → juicing → fermentation → bottling. Identified by its `code`
+  (an optional descriptive name can be added too), belongs to a season,
+  has a status (e.g. `planning`, `fermenting`, `conditioning`, `bottled`,
   `archived`), and free-text notes.
 - **Tree** — a physical apple tree the user owns (label, variety —
   nullable, since several are of unknown type — planting year, location
@@ -128,7 +129,9 @@ specific batch.
 ## 4. Data Model Sketch (SQLite)
 
 ```sql
-seasons(id, name, starts_on, ends_on)
+-- A season is always the calendar year, Jan 1 to Jan 1 — just a year
+-- number, no separate start/end dates to enter.
+seasons(id, year)
 
 trees(
   id, name, variety NULL, planted_on NULL,
@@ -138,7 +141,7 @@ trees(
 vessels(id, name, capacity_l, kind, active)
 
 batches(
-  id, season_id, code, name, status,
+  id, season_id, code, name NULL, status,
   vessel_id NULL, started_on, notes
 )
 
@@ -221,6 +224,10 @@ Design notes:
 - `sensor_readings` is intentionally separate from `events`: different
   volume profile (thousands of rows/day vs. a handful), different
   retention/rollup strategy, and no per-row user authorship.
+- `batches.name` is nullable, `vessel_id` and `trees.planted_on` stay
+  nullable too — a batch is identified by its `code`, not a display
+  name; not every batch sits in a notable vessel; not every tree's
+  planting year is known. None of these should block data entry.
 
 ## 5. Roadmap
 

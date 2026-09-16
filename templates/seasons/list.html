@@ -5,23 +5,20 @@
 {% block content %}
 <section class="page-header">
     <h1>Seasons</h1>
+    <p class="muted">A season always runs the calendar year, January to January.</p>
 </section>
 
 <form class="card inline-form" hx-post="/seasons" hx-target="#seasons-table-body" hx-swap="innerHTML"
       hx-on::after-request="if(event.detail.successful) this.reset()">
     <h2>Add season</h2>
-    <label>Name <input type="text" name="name" placeholder="2026" required></label>
-    <label>Starts on <input type="date" name="starts_on" required></label>
-    <label>Ends on <input type="date" name="ends_on"></label>
+    <label>Year <input type="number" name="year" placeholder="2026" required></label>
     <button type="submit">Add</button>
 </form>
 
 <table class="card table">
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Starts</th>
-            <th>Ends</th>
+            <th>Year</th>
             <th></th>
         </tr>
     </thead>
