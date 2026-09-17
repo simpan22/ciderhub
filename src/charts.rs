@@ -1,6 +1,10 @@
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, Months, NaiveDate};
 
 use crate::models::BatchTimelineRow;
+
+const MONTH_ABBREVS: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 /// Fixed, small palette cycled across whichever batches are selected —
 /// same spirit as the .status badge colors, just enough distinct hues
@@ -229,6 +233,20 @@ pub fn render_season_timeline(rows: &[BatchTimelineRow]) -> String {
         r#"<svg viewBox="0 0 {TIMELINE_WIDTH} {height}" xmlns="http://www.w3.org/2000/svg" class="chart-svg">"#
     );
 
+    // Month gridlines first, so the phase bars painted afterward sit
+    // on top of them rather than the other way around.
+    for (day, label) in month_gridlines(axis_min, axis_max) {
+        let x = x_of(day);
+        svg.push_str(&format!(
+            r##"<line x1="{x:.1}" y1="{y0:.1}" x2="{x:.1}" y2="{axis_y:.1}" stroke="#ddd6c8" stroke-width="1" />"##,
+            y0 = TIMELINE_MARGIN_TOP
+        ));
+        svg.push_str(&format!(
+            r##"<text x="{x:.1}" y="{ty:.1}" font-size="11" fill="#746f66" text-anchor="middle">{label}</text>"##,
+            ty = axis_y + 16.0
+        ));
+    }
+
     for (i, r) in resolved.iter().enumerate() {
         let y = TIMELINE_MARGIN_TOP + i as f64 * TIMELINE_ROW_H;
         let cy = y + TIMELINE_BAR_H / 2.0;
@@ -323,6 +341,34 @@ pub fn render_season_timeline(rows: &[BatchTimelineRow]) -> String {
     );
 
     format!("{svg}{legend}")
+}
+
+/// The 1st of every month falling within `[axis_min, axis_max]`
+/// (day-of-common-era offsets), paired with its 3-letter abbreviation.
+fn month_gridlines(axis_min: i64, axis_max: i64) -> Vec<(i64, &'static str)> {
+    let (Some(min_date), Some(max_date)) = (
+        NaiveDate::from_num_days_from_ce_opt(axis_min as i32),
+        NaiveDate::from_num_days_from_ce_opt(axis_max as i32),
+    ) else {
+        return Vec::new();
+    };
+
+    let mut cursor = NaiveDate::from_ymd_opt(min_date.year(), min_date.month(), 1).unwrap_or(min_date);
+    let mut lines = Vec::new();
+    loop {
+        if cursor > max_date {
+            break;
+        }
+        let day = cursor.num_days_from_ce() as i64;
+        if day >= axis_min {
+            lines.push((day, MONTH_ABBREVS[cursor.month0() as usize]));
+        }
+        cursor = match cursor.checked_add_months(Months::new(1)) {
+            Some(next) => next,
+            None => break,
+        };
+    }
+    lines
 }
 
 fn draw_segment(svg: &mut String, x0: f64, x1: f64, y: f64, color: &str) {

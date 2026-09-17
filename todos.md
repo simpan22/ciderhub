@@ -29,7 +29,10 @@ Batch ids should be prefilled with <year>-<batch letter> (e.g. 2026-A then 2026-
 # Feature: Dashboard timeline (Status: Done — docs/specs/dashboard-timeline.md)
 I want the dashboard to have a visualization where each batch of a season is represented as a horizontal bar on a timeline. The bar should start at the batch start date and end at the bottling date. The different batches should lie on a timeline every batch on its own row. Even though the timelines are duplicated they should represent the same time interval (some time before the start of the first batch -> some tome after the last bottling). We will call this view the Season overview. The bars should have labels according to the batch they represent and the different phases of the batch should be represented by different colors.
 
-# Feature: Batch list changes (Status: planning)
+# Feature: Add month lines in the timeline plot (Status: Done — docs/specs/timeline-month-lines.md)
+We need to be able to distinguish months in the timeline plot. This can be done by adding vertical lines for each month and labeling them with the forst three letters of the month. The lines should be in a light gray color and the labels should be in a darker gray color.
+
+# Feature: Batch list changes (Status: Spec ready for review — docs/specs/batch-list-columns.md)
 I want the Batch list to have the following items:
  - Batch id
  - Start date (first event date)
