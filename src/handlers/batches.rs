@@ -704,6 +704,22 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
         first_gravity_by_batch.entry(row.batch_id).or_insert((row.occurred_at, row.sg));
     }
 
+    // Summed across bottling events (usually just one) rather than
+    // assuming exactly one, same as Trees/Additives above.
+    let bottle_count_rows = sqlx::query!(
+        r#"
+        SELECT e.batch_id as "batch_id!", be.bottle_count
+        FROM bottling_events be
+        JOIN events e ON e.id = be.event_id
+        "#
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut bottle_count_by_batch: HashMap<i64, i64> = HashMap::new();
+    for row in bottle_count_rows {
+        *bottle_count_by_batch.entry(row.batch_id).or_insert(0) += row.bottle_count;
+    }
+
     let today = dates::today_iso();
 
     let batches = rows
@@ -733,6 +749,7 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
                 additives: additives_by_batch.remove(&row.id).unwrap_or_default(),
                 abv_pct,
                 days_since_bottling,
+                bottle_count: bottle_count_by_batch.get(&row.id).copied(),
             }
         })
         .collect();

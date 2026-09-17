@@ -33,6 +33,7 @@
             <th>Status</th>
             <th>Started</th>
             <th>Bottled</th>
+            <th>Bottles</th>
             <th>Trees</th>
             <th>ABV</th>
             <th>Aged</th>
@@ -48,6 +49,7 @@
             <td><span class="status status--{{ b.status }}">{{ b.status }}</span></td>
             <td>{{ b.started_on.as_deref().unwrap_or("—") }}</td>
             <td>{{ b.bottled_on.as_deref().unwrap_or("—") }}</td>
+            <td>{% if let Some(n) = b.bottle_count %}{{ n }}{% else %}—{% endif %}</td>
             <td>{% if b.trees.is_empty() %}—{% else %}{{ b.trees|join(", ") }}{% endif %}</td>
             <td>{% if let Some(abv) = b.abv_pct %}{{ abv|fmt("{:.1}") }}%{% else %}—{% endif %}</td>
             <td>{% if let Some(days) = b.days_since_bottling %}{{ days }} days{% else %}—{% endif %}</td>

@@ -92,6 +92,11 @@ pub struct BatchListItem {
     /// batch's first juicing event. See docs/specs/batch-list-columns.md.
     pub abv_pct: Option<f64>,
     pub days_since_bottling: Option<i64>,
+    /// Summed across every bottling event the batch has (usually just
+    /// one). `None` when it hasn't been bottled yet, distinct from
+    /// `Some(0)` which can't happen (`bottle_count > 0` is enforced by
+    /// the column's own CHECK).
+    pub bottle_count: Option<i64>,
 }
 
 #[derive(Deserialize)]
