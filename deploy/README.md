@@ -81,6 +81,34 @@ the `ciderhub` service over SSH.
 The app listens on `127.0.0.1:8091` — only nginx can reach it directly;
 it's never exposed on a public interface.
 
+## Schema changes that need `PRAGMA foreign_keys = OFF`
+
+SQLite can't `ALTER` a `CHECK` constraint in place — the documented fix
+is create-copy-drop-rename, which requires disabling `foreign_keys`
+first (otherwise dropping an FK-parent table cascades and destroys
+every `ON DELETE CASCADE` child row, even though the parent gets
+recreated and renamed back moments later — verified this the hard way
+once already, see git history around the "units"/"batch-failure"
+deploy).
+
+**`sqlx`'s SQLite migration runner always wraps a migration's SQL in a
+transaction, and ignores the `-- no-transaction` marker entirely for
+SQLite** (confirmed in `sqlx-sqlite-0.8.6`'s `migrate.rs`: `apply()`
+unconditionally calls `self.begin()`). Since `PRAGMA foreign_keys`
+can't be toggled inside an open transaction, **any migration that
+needs to disable it cannot be a normal `sqlx migrate` file** — it will
+silently "succeed" while cascading data loss.
+
+For this kind of change: write a standalone script (see
+`deploy/fix_events_check_constraint.py` for the template) that opens
+its own connection, sets `PRAGMA foreign_keys = OFF` *before* any
+`BEGIN`, does the rebuild, verifies with `PRAGMA foreign_key_check`,
+and turns `foreign_keys` back on. Run it directly against the target
+database file with the service stopped — never add it to
+`migrations/`. Before running it anywhere real: copy the target
+database, run the script against the copy, and diff row counts across
+every affected table first.
+
 ## Backups
 
 Not yet automated. The whole app's state is the one file at
