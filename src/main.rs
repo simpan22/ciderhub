@@ -26,7 +26,10 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::from_env();
     let db = db::connect(&config.database_url).await?;
-    let state = AppState { db };
+    let state = AppState {
+        db,
+        app_password: config.app_password.clone(),
+    };
 
     let app = Router::new()
         .route("/", get(handlers::dashboard::index))
@@ -152,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))
-        .layer(axum::middleware::from_fn(handlers::auth::require_auth))
+        .layer(axum::middleware::from_fn_with_state(state.clone(), handlers::auth::require_auth))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

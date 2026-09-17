@@ -74,12 +74,29 @@ the `ciderhub` service over SSH.
 | `/opt/ciderhub/ciderhub`             | the binary                                  |
 | `/opt/ciderhub/static/`              | CSS/JS, served via `ServeDir`               |
 | `/var/lib/ciderhub/ciderhub.db`      | SQLite database (persistent, not touched by deploys) |
-| `/etc/ciderhub/ciderhub.env`         | `DATABASE_URL` / `BIND_ADDR`, root:ciderhub 640 |
+| `/etc/ciderhub/ciderhub.env`         | `DATABASE_URL` / `BIND_ADDR` / `APP_PASSWORD`, root:ciderhub 640 |
 | `/etc/systemd/system/ciderhub.service` | service unit                              |
 | `/etc/nginx/sites-available/cider.simonochamanda.se` | reverse proxy + TLS (certbot-managed) |
 
 The app listens on `127.0.0.1:8091` — only nginx can reach it directly;
 it's never exposed on a public interface.
+
+## The site password (`APP_PASSWORD`)
+
+The shared login password (`src/handlers/auth.rs`) is read from the
+`APP_PASSWORD` environment variable — the app refuses to start without
+it, no fallback default, so it's never hardcoded in source (this repo
+is meant to be safe to publish). `deploy/ciderhub.env` and
+`.env.example` only carry a
+`changeme` placeholder; the real value exists in exactly one place,
+`/etc/ciderhub/ciderhub.env` on the server, edited directly over SSH
+and never committed. `deploy/deploy.sh` doesn't touch that file on
+ongoing deploys — only the one-time setup above does — so changing the
+password later is just:
+
+```bash
+ssh root@135.181.151.120 "\$EDITOR /etc/ciderhub/ciderhub.env && systemctl restart ciderhub"
+```
 
 ## Schema changes that need `PRAGMA foreign_keys = OFF`
 

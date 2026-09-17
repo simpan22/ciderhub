@@ -1,6 +1,6 @@
 use askama::Template;
 use askama_web::WebTemplate;
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::header::{HeaderMap, COOKIE, SET_COOKIE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::middleware::Next;
@@ -8,20 +8,22 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::Form;
 use serde::Deserialize;
 
+use crate::state::AppState;
+
 const COOKIE_NAME: &str = "ciderhub_auth";
-// Intentionally a single hardcoded shared password, not a real account
-// system — this just keeps casual visitors out, not a security boundary.
-const PASSWORD: &str = "tage";
 const ONE_YEAR_SECS: i64 = 60 * 60 * 24 * 365;
 
-fn is_authenticated(headers: &HeaderMap) -> bool {
+// A single shared password (from APP_PASSWORD, see config.rs), not a
+// real account system — this just keeps casual visitors out, not a
+// security boundary.
+fn is_authenticated(headers: &HeaderMap, app_password: &str) -> bool {
     let Some(cookie_header) = headers.get(COOKIE).and_then(|v| v.to_str().ok()) else {
         return false;
     };
     cookie_header
         .split(';')
         .map(str::trim)
-        .any(|pair| pair == format!("{COOKIE_NAME}={PASSWORD}"))
+        .any(|pair| pair == format!("{COOKIE_NAME}={app_password}"))
 }
 
 /// Only `/` is a safe redirect target we trust from user input — anything
@@ -40,13 +42,13 @@ pub struct LockedTemplate {
     pub error: bool,
 }
 
-pub async fn require_auth(request: Request, next: Next) -> Response {
+pub async fn require_auth(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let path = request.uri().path();
     if path == "/login" || path == "/healthz" || path.starts_with("/static/") {
         return next.run(request).await;
     }
 
-    if is_authenticated(request.headers()) {
+    if is_authenticated(request.headers(), &state.app_password) {
         return next.run(request).await;
     }
 
@@ -73,13 +75,14 @@ pub struct LoginForm {
     next: Option<String>,
 }
 
-pub async fn login(Form(form): Form<LoginForm>) -> Response {
+pub async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
     let next = safe_next(form.next);
 
-    if form.password == PASSWORD {
+    if form.password == state.app_password {
         let mut response = Redirect::to(&next).into_response();
         let cookie = format!(
-            "{COOKIE_NAME}={PASSWORD}; Path=/; HttpOnly; SameSite=Lax; Max-Age={ONE_YEAR_SECS}"
+            "{COOKIE_NAME}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={ONE_YEAR_SECS}",
+            state.app_password
         );
         response
             .headers_mut()
