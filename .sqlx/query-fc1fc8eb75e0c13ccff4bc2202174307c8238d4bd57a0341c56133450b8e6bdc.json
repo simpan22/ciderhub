@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id as \"id!\", name, variety, planted_on, location, notes FROM trees ORDER BY name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "variety",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "planted_on",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "location",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "fc1fc8eb75e0c13ccff4bc2202174307c8238d4bd57a0341c56133450b8e6bdc"
+}

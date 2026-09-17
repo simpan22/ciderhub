@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE tasting_events SET score = ?, tasting_notes = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "4886ad05fb08aa829d4e7a4ad98ec12e42a7a29eb9950aaadb252f63db08650a"
+}

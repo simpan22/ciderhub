@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO juicing_events (event_id, output_volume_l, equipment) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "1dfd7f057e19080f67ba9a47c8104f8e0deddfdba3fb6a86a2b2e5fb8a33afcd"
+}

@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.occurred_at, ae.substance, ae.amount, ae.unit_id, e.notes\n        FROM additive_events ae\n        JOIN events e ON e.id = ae.event_id\n        WHERE e.id = ? AND e.batch_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "substance",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "unit_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "notes",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "58376c0c5d208882e705e51d85329c0d625d87e74221b9785c0ca41f9faf4502"
+}

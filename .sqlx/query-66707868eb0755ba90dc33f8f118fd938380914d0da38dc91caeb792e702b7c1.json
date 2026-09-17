@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT MIN(occurred_at) as \"occurred_at: String\" FROM events WHERE batch_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at: String",
+        "ordinal": 0,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "66707868eb0755ba90dc33f8f118fd938380914d0da38dc91caeb792e702b7c1"
+}

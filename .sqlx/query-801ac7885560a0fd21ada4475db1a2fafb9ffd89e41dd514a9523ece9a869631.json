@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO additive_events (event_id, substance, amount, unit_id) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "801ac7885560a0fd21ada4475db1a2fafb9ffd89e41dd514a9523ece9a869631"
+}

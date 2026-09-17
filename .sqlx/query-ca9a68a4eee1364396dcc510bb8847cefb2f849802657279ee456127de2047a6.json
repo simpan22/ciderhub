@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT jtw.event_id, t.name as tree_name, jtw.percentage\n        FROM juicing_tree_weights jtw\n        JOIN juicing_events je ON je.event_id = jtw.event_id\n        JOIN events e ON e.id = je.event_id\n        JOIN trees t ON t.id = jtw.tree_id\n        WHERE e.batch_id = ?\n        ORDER BY t.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "event_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "tree_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "percentage",
+        "ordinal": 2,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ca9a68a4eee1364396dcc510bb8847cefb2f849802657279ee456127de2047a6"
+}

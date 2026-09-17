@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT batch_id, event_type, occurred_at FROM events ORDER BY occurred_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "event_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c71f88d78206662078d4af95827b800d4bbffd47bbe197b57b828779c41d002e"
+}

@@ -58,6 +58,14 @@ the box covers every cert on it, this one included.
 
 ## Ongoing deploys
 
+**Automatic**: `.github/workflows/deploy.yml` builds and deploys on
+every push to `main` — same steps as `deploy.sh` below, just triggered
+by CI instead of run by hand. See "Continuous deployment" below for
+setup and, importantly, the safety tradeoff it introduces.
+
+**Manual** (still works, e.g. for a one-off deploy without pushing to
+`main`, or if CI is down):
+
 ```bash
 ./deploy/deploy.sh
 ```
@@ -66,6 +74,56 @@ Builds the release binary locally, uploads it (staged as `ciderhub.new`
 then renamed into place — avoids running a half-uploaded binary if the
 transfer drops) plus the `static/` directory via rsync, then restarts
 the `ciderhub` service over SSH.
+
+## Continuous deployment
+
+`.github/workflows/deploy.yml` runs the same build-and-ship steps as
+`deploy.sh`, triggered automatically on every push to `main`, using a
+dedicated deploy SSH keypair (not anyone's personal key).
+
+### sqlx offline mode
+
+CI has no database to check queries against at compile time, so the
+build runs with `SQLX_OFFLINE=true` against a cached snapshot of every
+query's shape in `.sqlx/` (committed to the repo). **Whenever a query
+changes or a migration is added, regenerate it and commit the
+result:**
+
+```bash
+DATABASE_URL="sqlite://ciderhub.db" cargo sqlx prepare
+git add .sqlx
+```
+
+If `.sqlx` goes stale, the CI build fails outright (a missing/mismatched
+query in the cache is a hard compile error) — it can't silently ship
+a binary checked against the wrong schema.
+
+### One-time setup
+
+1. Generate a dedicated keypair (don't reuse a personal key):
+   ```bash
+   ssh-keygen -t ed25519 -f ./ciderhub_deploy -C "github-actions-deploy@ciderhub" -N ""
+   ```
+2. Add `ciderhub_deploy.pub`'s contents to `/root/.ssh/authorized_keys`
+   on the server.
+3. Add `ciderhub_deploy`'s contents (the private key) as the
+   `DEPLOY_SSH_KEY` secret on the GitHub repo (Settings → Secrets and
+   variables → Actions), then delete the local key files — nothing
+   else needs them once the secret is set.
+
+### The safety tradeoff this introduces
+
+`deploy.sh` always ran migrations automatically on startup (embedded
+in the binary via `sqlx::migrate!()`) — that part isn't new. What's
+new is that a schema-changing push to `main` now deploys itself
+immediately, closing the manual gap between "I've written a migration"
+and "I've actually run it against production" that this project's
+whole verify-against-a-prod-snapshot discipline (see "Schema changes
+that need `PRAGMA foreign_keys = OFF`" below, and the git history
+around the incident that section documents) depends on. **Keep doing
+that verification locally before pushing a migration to `main`** —
+CI/CD removes the pause that made it easy to remember to, not the need
+for it.
 
 ## Layout on the server
 

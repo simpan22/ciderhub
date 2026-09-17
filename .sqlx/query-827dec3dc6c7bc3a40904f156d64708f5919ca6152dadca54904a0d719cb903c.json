@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE events SET occurred_at = ?, notes = ? WHERE id = ? AND batch_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "827dec3dc6c7bc3a40904f156d64708f5919ca6152dadca54904a0d719cb903c"
+}

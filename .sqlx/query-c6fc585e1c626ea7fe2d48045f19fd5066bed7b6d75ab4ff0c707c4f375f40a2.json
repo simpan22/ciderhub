@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.occurred_at, re.volume_l, re.loss_l, e.notes\n        FROM racking_events re\n        JOIN events e ON e.id = re.event_id\n        WHERE e.id = ? AND e.batch_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "volume_l",
+        "ordinal": 1,
+        "type_info": "Float"
+      },
+      {
+        "name": "loss_l",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "notes",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "c6fc585e1c626ea7fe2d48045f19fd5066bed7b6d75ab4ff0c707c4f375f40a2"
+}

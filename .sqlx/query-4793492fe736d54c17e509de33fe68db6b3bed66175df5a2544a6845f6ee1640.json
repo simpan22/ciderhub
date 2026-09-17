@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM juicing_tree_weights WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "4793492fe736d54c17e509de33fe68db6b3bed66175df5a2544a6845f6ee1640"
+}

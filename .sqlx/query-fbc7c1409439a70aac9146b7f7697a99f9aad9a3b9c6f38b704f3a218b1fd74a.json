@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'additive', ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "fbc7c1409439a70aac9146b7f7697a99f9aad9a3b9c6f38b704f3a218b1fd74a"
+}

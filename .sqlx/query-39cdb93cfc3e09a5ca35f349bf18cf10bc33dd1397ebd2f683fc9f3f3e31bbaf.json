@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE juicing_events SET output_volume_l = ?, equipment = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "39cdb93cfc3e09a5ca35f349bf18cf10bc33dd1397ebd2f683fc9f3f3e31bbaf"
+}

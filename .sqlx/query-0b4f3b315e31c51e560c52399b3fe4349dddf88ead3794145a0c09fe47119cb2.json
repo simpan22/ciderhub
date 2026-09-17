@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE bottling_events SET bottle_count = ?, bottle_size_ml = ?, carbonation_method = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "0b4f3b315e31c51e560c52399b3fe4349dddf88ead3794145a0c09fe47119cb2"
+}

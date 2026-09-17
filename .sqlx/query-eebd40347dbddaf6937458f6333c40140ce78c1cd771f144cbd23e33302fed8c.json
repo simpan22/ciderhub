@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE measurement_events SET specific_gravity = ?, ph = ?, temperature_c = ?, volume_l = ?, tasting_notes = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "eebd40347dbddaf6937458f6333c40140ce78c1cd771f144cbd23e33302fed8c"
+}

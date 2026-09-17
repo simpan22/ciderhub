@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.id as \"event_id!\", e.occurred_at, e.notes, je.output_volume_l, je.equipment\n        FROM juicing_events je\n        JOIN events e ON e.id = je.event_id\n        WHERE e.batch_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "event_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "output_volume_l",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "equipment",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "b330caa0d3468affdd65e1348be28e85c1a69b20b00d6925c298bdcf2fbe257f"
+}

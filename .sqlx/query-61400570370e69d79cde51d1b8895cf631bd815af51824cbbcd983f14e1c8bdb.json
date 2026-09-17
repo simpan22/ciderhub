@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE batches SET name = ?, notes = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "61400570370e69d79cde51d1b8895cf631bd815af51824cbbcd983f14e1c8bdb"
+}

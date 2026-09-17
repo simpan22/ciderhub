@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO racking_events (event_id, volume_l, loss_l) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "81881e2a20006499ba158ada2257549ac791ec82b74ff9067b6d774c30446033"
+}

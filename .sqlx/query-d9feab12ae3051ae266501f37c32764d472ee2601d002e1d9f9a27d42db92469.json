@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO tasting_events (event_id, score, tasting_notes) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "d9feab12ae3051ae266501f37c32764d472ee2601d002e1d9f9a27d42db92469"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id as \"event_id!\", occurred_at, notes FROM events WHERE batch_id = ? AND event_type = 'failed'",
+  "describe": {
+    "columns": [
+      {
+        "name": "event_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "bc248681ca8e903e12e615fe8d70dd5e269c8619cacf329ee9d15f733261f927"
+}

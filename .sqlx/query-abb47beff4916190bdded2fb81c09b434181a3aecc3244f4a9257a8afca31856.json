@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO trees (name, variety, planted_on, location, notes) VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "abb47beff4916190bdded2fb81c09b434181a3aecc3244f4a9257a8afca31856"
+}

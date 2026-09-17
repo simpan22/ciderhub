@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO bottling_events (event_id, bottle_count, bottle_size_ml, carbonation_method) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "5a9bd89766f74c98881bb226bed6e6e733e6220483c61da9b16548c1ea272f0f"
+}

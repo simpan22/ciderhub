@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT tree_id, percentage as \"percentage!: f64\" FROM juicing_tree_weights WHERE event_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "tree_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "percentage!: f64",
+        "ordinal": 1,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "2c040fd5e3c52b354c5b90a93d82baba137cc9d2b21981ff4df54a242cee23f9"
+}

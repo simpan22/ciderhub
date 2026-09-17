@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT code FROM batches WHERE season_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "code",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ab6337e45d74e9c9989eece09ba49ebea2d5460146feb64a9da216cbf2cb161b"
+}

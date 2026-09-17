@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.batch_id as \"batch_id!\", e.event_type, e.occurred_at\n        FROM events e\n        JOIN batches b ON b.id = e.batch_id\n        WHERE b.season_id = ?\n        ORDER BY e.occurred_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "event_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c684d8c8d0d186822f01a4d10cc6a919d950f49632fec849be7cb305123e7c87"
+}

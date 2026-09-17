@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT t.name as tree_name, SUM(je.output_volume_l * jtw.percentage / 100.0) as \"total_l!: f64\"\n        FROM juicing_tree_weights jtw\n        JOIN juicing_events je ON je.event_id = jtw.event_id\n        JOIN events e ON e.id = je.event_id\n        JOIN trees t ON t.id = jtw.tree_id\n        WHERE e.batch_id = ? AND jtw.percentage IS NOT NULL\n        GROUP BY t.id, t.name\n        ORDER BY t.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "tree_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_l!: f64",
+        "ordinal": 1,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "24da62414d6895d61b68a218a92b7915326a926cc0e45d0e6e79bf2d4fe124b0"
+}

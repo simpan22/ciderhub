@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.batch_id as \"batch_id!\", be.bottle_count\n        FROM bottling_events be\n        JOIN events e ON e.id = be.event_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bottle_count",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6be06aaad2e2427cf20383623b87657460e0b97be26f194c5c109838a911e284"
+}

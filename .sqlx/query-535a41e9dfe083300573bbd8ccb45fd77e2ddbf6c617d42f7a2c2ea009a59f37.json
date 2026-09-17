@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.batch_id as \"batch_id!\", e.occurred_at, me.specific_gravity as \"sg!: f64\"\n        FROM measurement_events me\n        JOIN events e ON e.id = me.event_id\n        WHERE me.specific_gravity IS NOT NULL\n        ORDER BY e.occurred_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "sg!: f64",
+        "ordinal": 2,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "535a41e9dfe083300573bbd8ccb45fd77e2ddbf6c617d42f7a2c2ea009a59f37"
+}

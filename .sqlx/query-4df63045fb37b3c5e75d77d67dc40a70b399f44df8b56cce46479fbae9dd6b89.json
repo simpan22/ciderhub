@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT year FROM seasons WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "year",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4df63045fb37b3c5e75d77d67dc40a70b399f44df8b56cce46479fbae9dd6b89"
+}

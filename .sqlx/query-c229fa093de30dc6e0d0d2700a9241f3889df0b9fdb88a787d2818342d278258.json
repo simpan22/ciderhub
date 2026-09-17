@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE trees SET name = ?, variety = ?, planted_on = ?, location = ?, notes = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "c229fa093de30dc6e0d0d2700a9241f3889df0b9fdb88a787d2818342d278258"
+}

@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.id as \"event_id!\", e.occurred_at, e.notes, me.specific_gravity, me.ph, me.temperature_c, me.volume_l, me.tasting_notes\n        FROM measurement_events me\n        JOIN events e ON e.id = me.event_id\n        WHERE e.batch_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "event_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "occurred_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "specific_gravity",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "ph",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "temperature_c",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "volume_l",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "tasting_notes",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "4df9b452be5fb607eeff0cc0b96e7b2c1f75e5fabc4462ac5fbeea6280c78e80"
+}

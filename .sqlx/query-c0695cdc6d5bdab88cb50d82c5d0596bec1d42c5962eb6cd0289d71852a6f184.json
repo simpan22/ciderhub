@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO seasons (year) VALUES (?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "c0695cdc6d5bdab88cb50d82c5d0596bec1d42c5962eb6cd0289d71852a6f184"
+}

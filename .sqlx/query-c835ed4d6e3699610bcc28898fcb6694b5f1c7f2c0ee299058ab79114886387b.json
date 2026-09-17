@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT e.occurred_at, e.notes, me.volume_l as \"value!: f64\"\n                   FROM measurement_events me JOIN events e ON e.id = me.event_id\n                   WHERE e.batch_id = ? AND me.volume_l IS NOT NULL\n                   ORDER BY e.occurred_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "value!: f64",
+        "ordinal": 2,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "c835ed4d6e3699610bcc28898fcb6694b5f1c7f2c0ee299058ab79114886387b"
+}

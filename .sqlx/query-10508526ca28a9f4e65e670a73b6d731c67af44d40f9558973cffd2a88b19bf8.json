@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT DISTINCT e.batch_id as \"batch_id!\", t.name\n        FROM juicing_tree_weights jtw\n        JOIN juicing_events je ON je.event_id = jtw.event_id\n        JOIN events e ON e.id = je.event_id\n        JOIN trees t ON t.id = jtw.tree_id\n        ORDER BY t.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "10508526ca28a9f4e65e670a73b6d731c67af44d40f9558973cffd2a88b19bf8"
+}

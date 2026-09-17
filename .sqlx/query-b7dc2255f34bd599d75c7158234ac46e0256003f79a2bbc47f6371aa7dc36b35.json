@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE racking_events SET volume_l = ?, loss_l = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "b7dc2255f34bd599d75c7158234ac46e0256003f79a2bbc47f6371aa7dc36b35"
+}

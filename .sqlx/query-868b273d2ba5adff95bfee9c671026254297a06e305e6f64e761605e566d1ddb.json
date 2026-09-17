@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.occurred_at, te.score, te.tasting_notes, e.notes\n        FROM tasting_events te\n        JOIN events e ON e.id = te.event_id\n        WHERE e.id = ? AND e.batch_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "score",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "tasting_notes",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "868b273d2ba5adff95bfee9c671026254297a06e305e6f64e761605e566d1ddb"
+}

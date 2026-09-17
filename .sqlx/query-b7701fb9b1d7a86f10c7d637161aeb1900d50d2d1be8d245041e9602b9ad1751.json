@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE additive_events SET substance = ?, amount = ?, unit_id = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "b7701fb9b1d7a86f10c7d637161aeb1900d50d2d1be8d245041e9602b9ad1751"
+}

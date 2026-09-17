@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE seasons SET year = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "ad5cc76d362f102e2e3f800004b427402d6fd7d19fb9af043bfe1ce05838a329"
+}

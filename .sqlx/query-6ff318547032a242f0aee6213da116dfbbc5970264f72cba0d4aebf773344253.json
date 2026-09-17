@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO juicing_tree_weights (event_id, tree_id, percentage) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "6ff318547032a242f0aee6213da116dfbbc5970264f72cba0d4aebf773344253"
+}

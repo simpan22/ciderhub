@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REMOTE_HOST: 135.181.151.120
+  REMOTE_USER: root
+  REMOTE_APP_DIR: /opt/ciderhub
+  SERVICE_NAME: ciderhub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        # No live database in CI — sqlx checks queries at compile time
+        # against the cached query metadata in .sqlx/ instead (kept in
+        # sync with `cargo sqlx prepare`, see deploy/README.md).
+        run: SQLX_OFFLINE=true cargo build --release
+
+      - name: Set up deploy SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload binary
+        run: scp target/release/ciderhub "$REMOTE_USER@$REMOTE_HOST:$REMOTE_APP_DIR/ciderhub.new"
+
+      - name: Upload static assets
+        run: rsync -az --delete static/ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_APP_DIR/static/"
+
+      - name: Install and restart service
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" bash -s <<EOF
+          set -euo pipefail
+          mv "$REMOTE_APP_DIR/ciderhub.new" "$REMOTE_APP_DIR/ciderhub"
+          chown ciderhub:ciderhub "$REMOTE_APP_DIR/ciderhub"
+          chmod 755 "$REMOTE_APP_DIR/ciderhub"
+          chown -R ciderhub:ciderhub "$REMOTE_APP_DIR/static"
+          systemctl restart "$SERVICE_NAME"
+          sleep 1
+          systemctl is-active "$SERVICE_NAME"
+          EOF

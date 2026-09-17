@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT s.year as year FROM batches b JOIN seasons s ON s.id = b.season_id WHERE b.id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "year",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e7348d7c58e4a7560b7efe8ea7cb0e89d4857fdce07b754498c02719f970f3a6"
+}

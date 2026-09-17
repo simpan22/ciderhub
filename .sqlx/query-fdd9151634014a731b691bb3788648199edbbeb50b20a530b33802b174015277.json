@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO measurement_events (event_id, specific_gravity, ph, temperature_c, volume_l, tasting_notes) VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "fdd9151634014a731b691bb3788648199edbbeb50b20a530b33802b174015277"
+}

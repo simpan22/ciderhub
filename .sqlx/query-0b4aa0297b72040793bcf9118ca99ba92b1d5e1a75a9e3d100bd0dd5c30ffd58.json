@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT batch_id as \"batch_id!\", MIN(occurred_at) as \"occurred_at!\" FROM events WHERE event_type = 'juicing' GROUP BY batch_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "occurred_at!",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "0b4aa0297b72040793bcf9118ca99ba92b1d5e1a75a9e3d100bd0dd5c30ffd58"
+}
