@@ -13,9 +13,20 @@ const COLORS: [&str; 6] = [
     "#2c3e50", "#5b7a4f", "#a3623e", "#7a4f7a", "#4f7a7a", "#a33333",
 ];
 
+/// One data point already resolved to days-since-the-batch's-own-first-
+/// juicing-event (not a calendar date — see docs/specs/plot-days-since-juicing.md)
+/// plus a ready-made hover tooltip. `charts.rs` only knows about days
+/// and pre-formatted text; the metric-specific value formatting and
+/// day-offset math both happen in the caller (`dashboard.rs`).
+pub struct SeriesPoint {
+    pub day: i64,
+    pub value: f64,
+    pub tooltip: String,
+}
+
 pub struct Series {
     pub batch_code: String,
-    pub points: Vec<(String, f64)>, // (occurred_at ISO date, value)
+    pub points: Vec<SeriesPoint>,
 }
 
 const WIDTH: f64 = 640.0;
@@ -28,28 +39,21 @@ const MARGIN_BOTTOM: f64 = 36.0;
 /// Renders one metric's chart as a small, self-contained SVG (plus an
 /// HTML legend below it) — no charting library, per vision.md's stated
 /// preference for server-rendered SVG. Each series gets its own line;
-/// axes are scaled to whatever data is actually present.
+/// axes are scaled to whatever data is actually present. The x-axis is
+/// always widened to include day 0 ("Fermentation Start"), even when a
+/// series's own data starts later, so every chart shares the same
+/// anchor point.
 pub fn render_line_chart(series: &[Series]) -> String {
-    let points_by_series: Vec<Vec<(f64, f64)>> = series
-        .iter()
-        .map(|s| {
-            s.points
-                .iter()
-                .filter_map(|(date, value)| day_offset(date).map(|d| (d as f64, *value)))
-                .collect()
-        })
-        .collect();
-
-    let all_days: Vec<f64> = points_by_series.iter().flatten().map(|(d, _)| *d).collect();
-    let all_values: Vec<f64> = points_by_series.iter().flatten().map(|(_, v)| *v).collect();
+    let all_days: Vec<i64> = series.iter().flat_map(|s| s.points.iter().map(|p| p.day)).collect();
+    let all_values: Vec<f64> = series.iter().flat_map(|s| s.points.iter().map(|p| p.value)).collect();
 
     if all_values.is_empty() {
         return "<p class=\"muted\">No data for the selected batches.</p>".to_string();
     }
 
-    let min_day = all_days.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max_day = all_days.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let day_span = if max_day > min_day { max_day - min_day } else { 1.0 };
+    let min_day = all_days.iter().cloned().fold(0, i64::min);
+    let max_day = all_days.iter().cloned().fold(0, i64::max);
+    let day_span = if max_day > min_day { (max_day - min_day) as f64 } else { 1.0 };
 
     let min_v = all_values.iter().cloned().fold(f64::INFINITY, f64::min);
     let max_v = all_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -60,12 +64,30 @@ pub fn render_line_chart(series: &[Series]) -> String {
     let plot_w = WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
     let plot_h = HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
 
-    let x_of = |day: f64| MARGIN_LEFT + (day - min_day) / day_span * plot_w;
+    let x_of = |day: i64| MARGIN_LEFT + (day - min_day) as f64 / day_span * plot_w;
     let y_of = |value: f64| MARGIN_TOP + plot_h - (value - y_min) / value_span * plot_h;
 
     let mut svg = format!(
         r#"<svg viewBox="0 0 {WIDTH} {HEIGHT}" xmlns="http://www.w3.org/2000/svg" class="chart-svg">"#
     );
+
+    // Day-since-juicing tick gridlines, drawn first so the series lines
+    // painted afterward sit on top of them — same treatment already
+    // established for the Season overview's month gridlines, just in
+    // days instead of months.
+    for day in day_ticks(min_day, max_day) {
+        let x = x_of(day);
+        svg.push_str(&format!(
+            r##"<line x1="{x:.1}" y1="{y0:.1}" x2="{x:.1}" y2="{y1:.1}" stroke="#ddd6c8" stroke-width="1" />"##,
+            y0 = MARGIN_TOP,
+            y1 = HEIGHT - MARGIN_BOTTOM
+        ));
+        let label = if day == 0 { "Fermentation Start".to_string() } else { day.to_string() };
+        svg.push_str(&format!(
+            r##"<text x="{x:.1}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="middle">{label}</text>"##,
+            y = HEIGHT - MARGIN_BOTTOM + 16.0
+        ));
+    }
 
     // Axis lines.
     svg.push_str(&format!(
@@ -95,39 +117,29 @@ pub fn render_line_chart(series: &[Series]) -> String {
         v = min_v
     ));
 
-    // X-axis first/last date labels.
-    if let Some(first) = series.iter().flat_map(|s| s.points.first()).map(|(d, _)| d).next() {
-        svg.push_str(&format!(
-            r##"<text x="{x}" y="{y}" font-size="11" fill="#746f66" text-anchor="start">{first}</text>"##,
-            x = MARGIN_LEFT,
-            y = HEIGHT - MARGIN_BOTTOM + 16.0
-        ));
-    }
-    if let Some(last) = series.iter().flat_map(|s| s.points.last()).map(|(d, _)| d).last() {
-        svg.push_str(&format!(
-            r##"<text x="{x}" y="{y}" font-size="11" fill="#746f66" text-anchor="end">{last}</text>"##,
-            x = WIDTH - MARGIN_RIGHT,
-            y = HEIGHT - MARGIN_BOTTOM + 16.0
-        ));
-    }
-
-    for (i, points) in points_by_series.iter().enumerate() {
+    for (i, s) in series.iter().enumerate() {
         let color = COLORS[i % COLORS.len()];
-        if points.len() == 1 {
-            let (d, v) = points[0];
-            svg.push_str(&format!(
-                r#"<circle cx="{cx}" cy="{cy}" r="4" fill="{color}" />"#,
-                cx = x_of(d),
-                cy = y_of(v)
-            ));
-        } else {
-            let coords: Vec<String> = points
+
+        if s.points.len() >= 2 {
+            let coords: Vec<String> = s
+                .points
                 .iter()
-                .map(|(d, v)| format!("{:.1},{:.1}", x_of(*d), y_of(*v)))
+                .map(|p| format!("{:.1},{:.1}", x_of(p.day), y_of(p.value)))
                 .collect();
             svg.push_str(&format!(
                 r#"<polyline points="{}" fill="none" stroke="{color}" stroke-width="2" />"#,
                 coords.join(" ")
+            ));
+        }
+
+        // Every point gets a dot with a hover tooltip, whether or not
+        // it's also part of a connecting line.
+        for p in &s.points {
+            svg.push_str(&format!(
+                r#"<circle cx="{cx:.1}" cy="{cy:.1}" r="4" fill="{color}"><title>{tooltip}</title></circle>"#,
+                cx = x_of(p.day),
+                cy = y_of(p.value),
+                tooltip = escape_xml_text(&p.tooltip)
             ));
         }
     }
@@ -149,7 +161,52 @@ pub fn render_line_chart(series: &[Series]) -> String {
     format!(r#"{svg}<div class="chart-legend">{legend}</div>"#)
 }
 
-fn day_offset(iso_date: &str) -> Option<i64> {
+/// Tick interval in days, chosen from the axis's day-span so a chart
+/// never ends up with either a handful of ticks crammed together or
+/// dozens of them — same fixed-threshold approach already used for the
+/// Season overview's month gridlines.
+fn day_tick_interval(span_days: i64) -> i64 {
+    match span_days {
+        d if d <= 14 => 2,
+        d if d <= 30 => 5,
+        d if d <= 90 => 10,
+        d if d <= 180 => 30,
+        _ => 60,
+    }
+}
+
+/// Every tick day within `[axis_min, axis_max]`, spaced by
+/// `day_tick_interval`'s result and always including `0` — the axis
+/// itself is always widened to include `0`, so this is really just
+/// "every Nth day counting outward from Fermentation Start."
+fn day_ticks(axis_min: i64, axis_max: i64) -> Vec<i64> {
+    let interval = day_tick_interval(axis_max - axis_min);
+    let mut ticks = Vec::new();
+
+    let mut day = 0;
+    while day >= axis_min {
+        ticks.push(day);
+        day -= interval;
+    }
+    let mut day = interval;
+    while day <= axis_max {
+        ticks.push(day);
+        day += interval;
+    }
+
+    ticks.sort_unstable();
+    ticks
+}
+
+/// Minimal XML text-content escaping for the handful of characters
+/// that are structurally significant inside a `<title>` element —
+/// needed because tooltip text can include a user-entered event note,
+/// unlike every other value this module embeds (numbers, dates).
+fn escape_xml_text(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
+pub fn day_offset(iso_date: &str) -> Option<i64> {
     NaiveDate::parse_from_str(iso_date, "%Y-%m-%d")
         .ok()
         .map(|d| d.num_days_from_ce() as i64)

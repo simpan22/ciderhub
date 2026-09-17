@@ -8,7 +8,7 @@ use axum::response::{IntoResponse, Response};
 
 use serde::Deserialize;
 
-use crate::charts::{render_line_chart, render_season_timeline, Series};
+use crate::charts::{day_offset, render_line_chart, render_season_timeline, Series, SeriesPoint};
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{BatchOption, BatchTimelineRow, ChartSection, MetricOption, SeasonOption};
@@ -51,15 +51,25 @@ fn parse_selection(raw: &str) -> (Vec<i64>, Vec<String>) {
     (batch_ids, metrics)
 }
 
+/// A raw (date, value, note) reading for one metric, before it's been
+/// placed on the days-since-juicing axis or formatted into a tooltip —
+/// both of which need to know which batch this came from and its
+/// juicing date, neither of which this function has.
+struct MetricReading {
+    occurred_at: String,
+    value: f64,
+    notes: Option<String>,
+}
+
 async fn fetch_measurement_series(
     db: &sqlx::SqlitePool,
     batch_id: i64,
     metric: &str,
-) -> Result<Vec<(String, f64)>, sqlx::Error> {
+) -> Result<Vec<MetricReading>, sqlx::Error> {
     let rows = match metric {
         "specific_gravity" => {
             sqlx::query!(
-                r#"SELECT e.occurred_at, me.specific_gravity as "value!: f64"
+                r#"SELECT e.occurred_at, e.notes, me.specific_gravity as "value!: f64"
                    FROM measurement_events me JOIN events e ON e.id = me.event_id
                    WHERE e.batch_id = ? AND me.specific_gravity IS NOT NULL
                    ORDER BY e.occurred_at"#,
@@ -68,12 +78,12 @@ async fn fetch_measurement_series(
             .fetch_all(db)
             .await?
             .into_iter()
-            .map(|r| (r.occurred_at, r.value))
+            .map(|r| MetricReading { occurred_at: r.occurred_at, value: r.value, notes: r.notes })
             .collect()
         }
         "ph" => {
             sqlx::query!(
-                r#"SELECT e.occurred_at, me.ph as "value!: f64"
+                r#"SELECT e.occurred_at, e.notes, me.ph as "value!: f64"
                    FROM measurement_events me JOIN events e ON e.id = me.event_id
                    WHERE e.batch_id = ? AND me.ph IS NOT NULL
                    ORDER BY e.occurred_at"#,
@@ -82,12 +92,12 @@ async fn fetch_measurement_series(
             .fetch_all(db)
             .await?
             .into_iter()
-            .map(|r| (r.occurred_at, r.value))
+            .map(|r| MetricReading { occurred_at: r.occurred_at, value: r.value, notes: r.notes })
             .collect()
         }
         "temperature_c" => {
             sqlx::query!(
-                r#"SELECT e.occurred_at, me.temperature_c as "value!: f64"
+                r#"SELECT e.occurred_at, e.notes, me.temperature_c as "value!: f64"
                    FROM measurement_events me JOIN events e ON e.id = me.event_id
                    WHERE e.batch_id = ? AND me.temperature_c IS NOT NULL
                    ORDER BY e.occurred_at"#,
@@ -96,12 +106,12 @@ async fn fetch_measurement_series(
             .fetch_all(db)
             .await?
             .into_iter()
-            .map(|r| (r.occurred_at, r.value))
+            .map(|r| MetricReading { occurred_at: r.occurred_at, value: r.value, notes: r.notes })
             .collect()
         }
         "volume_l" => {
             sqlx::query!(
-                r#"SELECT e.occurred_at, me.volume_l as "value!: f64"
+                r#"SELECT e.occurred_at, e.notes, me.volume_l as "value!: f64"
                    FROM measurement_events me JOIN events e ON e.id = me.event_id
                    WHERE e.batch_id = ? AND me.volume_l IS NOT NULL
                    ORDER BY e.occurred_at"#,
@@ -110,11 +120,11 @@ async fn fetch_measurement_series(
             .fetch_all(db)
             .await?
             .into_iter()
-            .map(|r| (r.occurred_at, r.value))
+            .map(|r| MetricReading { occurred_at: r.occurred_at, value: r.value, notes: r.notes })
             .collect()
         }
         "score" => sqlx::query!(
-            r#"SELECT e.occurred_at, te.score as "value!: i64"
+            r#"SELECT e.occurred_at, e.notes, te.score as "value!: i64"
                FROM tasting_events te JOIN events e ON e.id = te.event_id
                WHERE e.batch_id = ?
                ORDER BY e.occurred_at"#,
@@ -123,12 +133,45 @@ async fn fetch_measurement_series(
         .fetch_all(db)
         .await?
         .into_iter()
-        .map(|r| (r.occurred_at, r.value as f64))
+        .map(|r| MetricReading { occurred_at: r.occurred_at, value: r.value as f64, notes: r.notes })
         .collect(),
         _ => Vec::new(),
     };
 
     Ok(rows)
+}
+
+/// Same precision each metric's value already uses in the batch
+/// timeline's measurement summary (`fetch_timeline` in
+/// `handlers/batches.rs`) — kept consistent rather than inventing a
+/// second set of formatting rules just for chart tooltips.
+fn format_metric_value(metric: &str, value: f64) -> String {
+    match metric {
+        "specific_gravity" => format!("SG {value:.3}"),
+        "ph" => format!("pH {value:.2}"),
+        "temperature_c" => format!("{value:.1}°C"),
+        "volume_l" => format!("{value:.1} L"),
+        "score" => format!("{value:.0}/10"),
+        _ => value.to_string(),
+    }
+}
+
+/// Every involved batch's first `juicing` event date, in one query —
+/// the reference point every chart's x-axis is now measured from. A
+/// batch missing from the result has no juicing event and can't be
+/// placed on this axis at all (see docs/specs/plot-days-since-juicing.md).
+async fn fetch_juicing_dates(db: &sqlx::SqlitePool, batch_ids: &[i64]) -> Result<HashMap<i64, String>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT batch_id as "batch_id!", MIN(occurred_at) as "occurred_at!" FROM events WHERE event_type = 'juicing' GROUP BY batch_id"#
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .filter(|r| batch_ids.contains(&r.batch_id))
+        .map(|r| (r.batch_id, r.occurred_at))
+        .collect())
 }
 
 #[derive(Template, WebTemplate)]
@@ -294,6 +337,12 @@ async fn build_charts(
         .map(|r| (r.id, r.code))
         .collect();
 
+    // Every chart's x-axis is days since each batch's own first
+    // juicing event — a batch with no juicing event has no day 0 to
+    // measure from, so it's left out of every metric's chart, not
+    // just the ones it happens to have data for.
+    let juicing_dates = fetch_juicing_dates(db, batch_ids).await?;
+
     let mut charts = Vec::new();
     for (slug, label) in METRICS {
         if !metrics.iter().any(|m| m == slug) {
@@ -302,10 +351,29 @@ async fn build_charts(
 
         let mut series = Vec::new();
         for &batch_id in batch_ids {
-            let points = fetch_measurement_series(db, batch_id, slug).await?;
+            let Some(juicing_date) = juicing_dates.get(&batch_id) else {
+                continue;
+            };
+            let Some(juicing_day) = day_offset(juicing_date) else {
+                continue;
+            };
+
+            let readings = fetch_measurement_series(db, batch_id, slug).await?;
+            let points: Vec<SeriesPoint> = readings
+                .into_iter()
+                .filter_map(|r| {
+                    let day = day_offset(&r.occurred_at)? - juicing_day;
+                    let mut tooltip = format!("{} (Day {day}): {}", r.occurred_at, format_metric_value(slug, r.value));
+                    if let Some(notes) = r.notes.filter(|n| !n.is_empty()) {
+                        tooltip.push_str(&format!(" — {notes}"));
+                    }
+                    Some(SeriesPoint { day, value: r.value, tooltip })
+                })
+                .collect();
             if points.is_empty() {
                 continue;
             }
+
             let batch_code = batch_codes
                 .iter()
                 .find(|(id, _)| *id == batch_id)

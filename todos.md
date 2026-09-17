@@ -47,3 +47,7 @@ Instead of asking for kg of apples by tree, we should ask for a percentage per t
 This way we can calculate the liters per tree based on the total output of juicing and the percentage per tree.
 
 # Feature: Batches list should contain number of bottles if relevant (Status: Done — docs/specs/batch-list-bottle-count.md)
+
+
+# Feature: Plot changes (Status: Done — docs/specs/plot-days-since-juicing.md)
+We need the over-time plots to have an x axis of days after juicing rather than absolute dates. This way we can compare batches more easily. The x axis should be labeled with the number of days after juicing and the first day should be labeled as "Fermentation Start". Events should be marked as dots on the graph, hovering over them should show a summary of the event.
