@@ -51,3 +51,6 @@ This way we can calculate the liters per tree based on the total output of juici
 
 # Feature: Plot changes (Status: Done — docs/specs/plot-days-since-juicing.md)
 We need the over-time plots to have an x axis of days after juicing rather than absolute dates. This way we can compare batches more easily. The x axis should be labeled with the number of days after juicing and the first day should be labeled as "Fermentation Start". Events should be marked as dots on the graph, hovering over them should show a summary of the event.
+
+# Feature: Weekly lines in the Season overview (Status: Done — docs/specs/timeline-week-lines.md)
+In the season overview we should add weekly lines labeled with dates to make it easier to see which dates are where.
