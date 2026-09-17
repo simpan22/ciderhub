@@ -54,3 +54,8 @@ We need the over-time plots to have an x axis of days after juicing rather than 
 
 # Feature: Weekly lines in the Season overview (Status: Done — docs/specs/timeline-week-lines.md)
 In the season overview we should add weekly lines labeled with dates to make it easier to see which dates are where.
+
+# Feature: Add grid for the plots (Status: Done — docs/specs/plot-y-gridlines.md)
+We need explicit grid lines for the plots to make it easier to read the values. The grid should be light gray and not too intrusive.
+
+# Bug: Remove the date labels at the start and end of the timeline in the Season overview (Status: Done — docs/specs/timeline-remove-endpoint-labels.md)

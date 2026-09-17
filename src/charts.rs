@@ -85,6 +85,23 @@ pub fn render_line_chart(series: &[Series]) -> String {
         ));
     }
 
+    // Horizontal value gridlines — same light, behind-the-data
+    // treatment as every other gridline in this app.
+    let (step, decimals) = y_tick_step(y_min, y_max);
+    for tick in y_ticks(y_min, y_max, step) {
+        let y = y_of(tick);
+        svg.push_str(&format!(
+            r##"<line x1="{x0}" y1="{y:.1}" x2="{x1}" y2="{y:.1}" stroke="#ddd6c8" stroke-width="1" />"##,
+            x0 = MARGIN_LEFT,
+            x1 = WIDTH - MARGIN_RIGHT
+        ));
+        svg.push_str(&format!(
+            r##"<text x="{x}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="end">{tick:.decimals$}</text>"##,
+            x = MARGIN_LEFT - 6.0,
+            y = y + 4.0
+        ));
+    }
+
     // Axis lines.
     svg.push_str(&format!(
         r##"<line x1="{x0}" y1="{y0}" x2="{x0}" y2="{y1}" stroke="#8899aa" stroke-width="1" />"##,
@@ -97,20 +114,6 @@ pub fn render_line_chart(series: &[Series]) -> String {
         x0 = MARGIN_LEFT,
         y1 = HEIGHT - MARGIN_BOTTOM,
         x2 = WIDTH - MARGIN_RIGHT
-    ));
-
-    // Y-axis min/max labels.
-    svg.push_str(&format!(
-        r##"<text x="{x}" y="{y}" font-size="11" fill="#746f66" text-anchor="end">{v:.3}</text>"##,
-        x = MARGIN_LEFT - 6.0,
-        y = y_of(y_max) + 4.0,
-        v = max_v
-    ));
-    svg.push_str(&format!(
-        r##"<text x="{x}" y="{y}" font-size="11" fill="#746f66" text-anchor="end">{v:.3}</text>"##,
-        x = MARGIN_LEFT - 6.0,
-        y = y_of(y_min) + 4.0,
-        v = min_v
     ));
 
     for (i, s) in series.iter().enumerate() {
@@ -194,6 +197,54 @@ fn day_ticks(axis_min: i64, axis_max: i64) -> Vec<i64> {
     ticks
 }
 
+/// A "nice" step size (1, 2, or 5 × a power of 10) close to
+/// `span / target_ticks`, plus how many decimal places that step
+/// needs to display exactly — e.g. a step of `0.1` needs 1 decimal,
+/// `5` needs 0. Standard "nice numbers" axis approach: avoids ugly
+/// gridline spacing like "every 0.137 units" just because that's what
+/// a plain division would give.
+fn y_tick_step(y_min: f64, y_max: f64) -> (f64, usize) {
+    const TARGET_TICKS: f64 = 4.0;
+
+    let span = (y_max - y_min).max(1e-9);
+    let raw_step = span / TARGET_TICKS;
+    let magnitude = 10f64.powf(raw_step.log10().floor());
+    let residual = raw_step / magnitude;
+    let nice = if residual < 1.5 {
+        1.0
+    } else if residual < 3.0 {
+        2.0
+    } else if residual < 7.0 {
+        5.0
+    } else {
+        10.0
+    };
+    let step = nice * magnitude;
+
+    let decimals = if step <= 0.0 {
+        0
+    } else {
+        (-step.log10().floor()).max(0.0) as usize
+    };
+
+    (step, decimals)
+}
+
+/// Every multiple of `step` within `[y_min, y_max]`.
+fn y_ticks(y_min: f64, y_max: f64, step: f64) -> Vec<f64> {
+    if step <= 0.0 {
+        return Vec::new();
+    }
+
+    let mut ticks = Vec::new();
+    let mut v = (y_min / step).ceil() * step;
+    while v <= y_max + step * 1e-6 {
+        ticks.push(v);
+        v += step;
+    }
+    ticks
+}
+
 /// Minimal XML text-content escaping for the handful of characters
 /// that are structurally significant inside a `<title>` element —
 /// needed because tooltip text can include a user-entered event note,
@@ -243,21 +294,13 @@ pub fn render_season_timeline(rows: &[BatchTimelineRow]) -> String {
     let mut resolved = Vec::new();
     let mut min_day = i64::MAX;
     let mut max_day = i64::MIN;
-    let mut earliest_label: Option<&str> = None;
-    let mut latest_label: Option<&str> = None;
 
     for row in rows {
         let (Some(start_day), Some(end_day)) = (day_offset(&row.start), day_offset(&row.end)) else {
             continue;
         };
-        if start_day < min_day {
-            min_day = start_day;
-            earliest_label = Some(&row.start);
-        }
-        if end_day > max_day {
-            max_day = end_day;
-            latest_label = Some(&row.end);
-        }
+        min_day = min_day.min(start_day);
+        max_day = max_day.max(end_day);
         resolved.push(ResolvedRow {
             code: row.code.clone(),
             start_day,
@@ -367,21 +410,6 @@ pub fn render_season_timeline(rows: &[BatchTimelineRow]) -> String {
         x0 = TIMELINE_MARGIN_LEFT,
         x1 = TIMELINE_WIDTH - TIMELINE_MARGIN_RIGHT
     ));
-    if let Some(label) = earliest_label {
-        svg.push_str(&format!(
-            r##"<text x="{x:.1}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="start">{label}</text>"##,
-            x = TIMELINE_MARGIN_LEFT,
-            y = axis_y + 16.0
-        ));
-    }
-    if let Some(label) = latest_label {
-        svg.push_str(&format!(
-            r##"<text x="{x:.1}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="end">{label}</text>"##,
-            x = TIMELINE_WIDTH - TIMELINE_MARGIN_RIGHT,
-            y = axis_y + 16.0
-        ));
-    }
-
     svg.push_str("</svg>");
 
     let legend = format!(
