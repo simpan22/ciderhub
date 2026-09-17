@@ -1,3 +1,4 @@
+mod charts;
 mod config;
 mod db;
 mod dates;

@@ -1,0 +1,12 @@
+<div id="stats-results">
+    {% if charts.is_empty() %}
+    <p class="muted">Select at least one batch and one metric to see a chart.</p>
+    {% else %}
+    {% for chart in charts %}
+    <div class="card chart-card">
+        <h2>{{ chart.label }}</h2>
+        {{ chart.svg|safe }}
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>

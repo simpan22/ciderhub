@@ -203,3 +203,22 @@ pub struct AddTastingForm {
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }
+
+pub struct BatchOption {
+    pub id: i64,
+    pub code: String,
+    pub checked: bool,
+}
+
+pub struct MetricOption {
+    pub slug: &'static str,
+    pub label: &'static str,
+    pub checked: bool,
+}
+
+/// One metric's rendered chart, ready to drop into the page — the SVG
+/// markup (or an empty-state message) plus its own legend.
+pub struct ChartSection {
+    pub label: &'static str,
+    pub svg: String,
+}
