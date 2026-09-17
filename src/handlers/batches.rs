@@ -57,6 +57,10 @@ pub struct BatchDetail {
     pub status: &'static str,
     pub season_year: i64,
     pub notes: Option<String>,
+    /// Not stored — the date of the batch's earliest event, if it has
+    /// any. Computing this instead of asking for it at creation means
+    /// it can never disagree with what actually happened.
+    pub started_on: Option<String>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -64,7 +68,6 @@ pub struct BatchDetail {
 struct ListTemplate {
     batches: Vec<BatchListItem>,
     seasons: Vec<Season>,
-    today: String,
 }
 
 #[derive(Template, WebTemplate)]
@@ -250,6 +253,13 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
 
     let event_types = fetch_event_types(db, id).await?;
 
+    let started_on = sqlx::query_scalar!(
+        r#"SELECT MIN(occurred_at) as "occurred_at: String" FROM events WHERE batch_id = ?"#,
+        id
+    )
+    .fetch_one(db)
+    .await?;
+
     let batch = BatchDetail {
         id: row.id,
         code: row.code,
@@ -257,6 +267,7 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
         status: compute_status(event_types.iter().map(String::as_str)),
         season_year: row.season_year,
         notes: row.notes,
+        started_on,
     };
 
     Ok(Some(MetaTemplate {
@@ -592,11 +603,7 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
 
     let seasons = fetch_seasons(&state.db).await?;
 
-    Ok(ListTemplate {
-        batches,
-        seasons,
-        today: dates::today_iso(),
-    })
+    Ok(ListTemplate { batches, seasons })
 }
 
 pub async fn create(
@@ -604,11 +611,10 @@ pub async fn create(
     Form(form): Form<NewBatchForm>,
 ) -> Result<impl IntoResponse, AppError> {
     let result = sqlx::query!(
-        "INSERT INTO batches (season_id, code, name, started_on) VALUES (?, ?, ?, ?)",
+        "INSERT INTO batches (season_id, code, name) VALUES (?, ?, ?)",
         form.season_id,
         form.code,
-        form.name,
-        form.started_on
+        form.name
     )
     .execute(&state.db)
     .await?;

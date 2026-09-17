@@ -2,6 +2,7 @@
     <h2>Batch details</h2>
     <p class="muted">
         {{ batch.season_year }} · <span class="status status--{{ batch.status }}">{{ batch.status }}</span>
+        · {% if let Some(started) = batch.started_on %}Started {{ started }}{% else %}Not started yet{% endif %}
     </p>
     <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
         <label>Name <input type="text" name="name" value="{{ batch.name.as_deref().unwrap_or("") }}" placeholder="optional"></label>

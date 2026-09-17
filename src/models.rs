@@ -89,8 +89,6 @@ pub struct NewBatchForm {
     pub code: String,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub name: Option<String>,
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub started_on: Option<String>,
 }
 
 #[derive(Deserialize)]
