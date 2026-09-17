@@ -33,7 +33,7 @@
             {% for t in tree_fields %}
             <div class="tree-weight-row">
                 <label class="checkbox"><input type="checkbox" name="use_tree_{{ t.tree_id }}"> {{ t.tree_name }}</label>
-                <input type="number" step="0.1" min="0" name="weight_tree_{{ t.tree_id }}" placeholder="kg (optional)">
+                <input type="number" step="0.1" min="0" max="100" name="percentage_tree_{{ t.tree_id }}" placeholder="%">
             </div>
             {% endfor %}
         </fieldset>

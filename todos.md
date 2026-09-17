@@ -42,6 +42,6 @@ I want the Batch list to have the following items:
  - How long it has been stored since bottling (if it has been bottled)
  - A list of additives (just a list, not how much of each or ratios)
 
-# Feature: Juicing event form changes (Status: planning)
+# Feature: Juicing event form changes (Status: Done — docs/specs/juicing-tree-percentage.md)
 Instead of asking for kg of apples by tree, we should ask for a percentage per tree. This can be a required field. Default to an even distribution for existing entries in the database.
 This way we can calculate the liters per tree based on the total output of juicing and the percentage per tree.

@@ -5,7 +5,7 @@
     {% else %}
     <ul class="yield-list">
         {% for ty in tree_yields %}
-        <li>{{ ty.tree_name }} — {{ ty.total_kg }} kg</li>
+        <li>{{ ty.tree_name }} — {{ ty.total_l|fmt("{:.1}") }} L</li>
         {% endfor %}
     </ul>
     {% endif %}

@@ -122,15 +122,16 @@ pub struct TimelineRow {
     pub summary: String,
 }
 
-/// One tree's checkbox + optional weight in the "Log juicing" /
-/// juicing-edit form. `checked`/`weight_kg` are only meaningful when
-/// rendering an edit form for an existing event; on the blank "add"
-/// form every tree starts unchecked with no weight.
-pub struct TreeWeightField {
+/// One tree's checkbox + share of the juicing event's output, in the
+/// "Log juicing" / juicing-edit form. `checked`/`percentage` are only
+/// meaningful when rendering an edit form for an existing event; on
+/// the blank "add" form every tree starts unchecked with no
+/// percentage.
+pub struct TreePercentageField {
     pub tree_id: i64,
     pub tree_name: String,
     pub checked: bool,
-    pub weight_kg: Option<f64>,
+    pub percentage: Option<f64>,
 }
 
 pub struct MonthOption {
@@ -172,7 +173,7 @@ pub struct AddMeasurementForm {
 
 pub struct TreeYield {
     pub tree_name: String,
-    pub total_kg: f64,
+    pub total_l: f64,
 }
 
 #[derive(Deserialize)]

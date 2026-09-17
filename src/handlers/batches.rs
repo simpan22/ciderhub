@@ -12,7 +12,7 @@ use crate::error::AppError;
 use crate::models::{
     AddAdditiveForm, AddBottlingForm, AddFailureForm, AddMeasurementForm, AddRackingForm,
     AddTastingForm, BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree,
-    TreeWeightField, TreeYield, Unit, UnitOption, UpdateBatchForm,
+    TreePercentageField, TreeYield, Unit, UnitOption, UpdateBatchForm,
 };
 use crate::state::AppState;
 
@@ -103,7 +103,7 @@ struct DetailTemplate {
     batch_id: i64,
     tree_yields: Vec<TreeYield>,
     timeline: Vec<TimelineRow>,
-    tree_fields: Vec<TreeWeightField>,
+    tree_fields: Vec<TreePercentageField>,
     units: Vec<Unit>,
     months: Vec<MonthOption>,
     today_day: u32,
@@ -120,7 +120,7 @@ struct EditJuicingTemplate {
     output_volume_l: f64,
     equipment: Option<String>,
     notes: Option<String>,
-    tree_fields: Vec<TreeWeightField>,
+    tree_fields: Vec<TreePercentageField>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -241,16 +241,16 @@ async fn fetch_units(db: &sqlx::SqlitePool) -> Result<Vec<Unit>, sqlx::Error> {
 }
 
 /// Builds the tree checkbox list for the juicing form: `selected` maps a
-/// tree id to its weight (or `None` if included but unweighed) for the
-/// trees that are part of this event; every other tree renders unchecked.
-fn build_tree_fields(all_trees: &[Tree], selected: &HashMap<i64, Option<f64>>) -> Vec<TreeWeightField> {
+/// tree id to its percentage share of the event's output for the trees
+/// that are part of this event; every other tree renders unchecked.
+fn build_tree_fields(all_trees: &[Tree], selected: &HashMap<i64, f64>) -> Vec<TreePercentageField> {
     all_trees
         .iter()
-        .map(|t| TreeWeightField {
+        .map(|t| TreePercentageField {
             tree_id: t.id,
             tree_name: t.name.clone(),
             checked: selected.contains_key(&t.id),
-            weight_kg: selected.get(&t.id).copied().flatten(),
+            percentage: selected.get(&t.id).copied(),
         })
         .collect()
 }
@@ -322,7 +322,7 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
 async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<TimelineTemplate, sqlx::Error> {
     let juicings = sqlx::query!(
         r#"
-        SELECT e.id as "event_id!", e.occurred_at, e.notes, je.output_volume_l, je.yield_pct, je.equipment
+        SELECT e.id as "event_id!", e.occurred_at, e.notes, je.output_volume_l, je.equipment
         FROM juicing_events je
         JOIN events e ON e.id = je.event_id
         WHERE e.batch_id = ?
@@ -334,7 +334,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
 
     let juicing_tree_rows = sqlx::query!(
         r#"
-        SELECT jtw.event_id, t.name as tree_name, jtw.weight_kg
+        SELECT jtw.event_id, t.name as tree_name, jtw.percentage
         FROM juicing_tree_weights jtw
         JOIN juicing_events je ON je.event_id = jtw.event_id
         JOIN events e ON e.id = je.event_id
@@ -352,7 +352,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         trees_by_event
             .entry(row.event_id)
             .or_default()
-            .push((row.tree_name, row.weight_kg));
+            .push((row.tree_name, row.percentage));
     }
 
     let measurements = sqlx::query!(
@@ -425,15 +425,19 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
     .fetch_all(db)
     .await?;
 
+    // Liters per tree — output_volume_l * percentage / 100, summed
+    // across every juicing event the batch has, computed on read like
+    // every other derived figure in this app rather than tracking a
+    // separate fruit-weight measurement.
     let tree_yields = sqlx::query_as!(
         TreeYield,
         r#"
-        SELECT t.name as tree_name, SUM(jtw.weight_kg) as "total_kg!: f64"
+        SELECT t.name as tree_name, SUM(je.output_volume_l * jtw.percentage / 100.0) as "total_l!: f64"
         FROM juicing_tree_weights jtw
         JOIN juicing_events je ON je.event_id = jtw.event_id
         JOIN events e ON e.id = je.event_id
         JOIN trees t ON t.id = jtw.tree_id
-        WHERE e.batch_id = ? AND jtw.weight_kg IS NOT NULL
+        WHERE e.batch_id = ? AND jtw.percentage IS NOT NULL
         GROUP BY t.id, t.name
         ORDER BY t.name
         "#,
@@ -449,8 +453,11 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             .remove(&j.event_id)
             .unwrap_or_default()
             .into_iter()
-            .map(|(name, weight)| match weight {
-                Some(w) => format!("{name} ({w:.1} kg)"),
+            .map(|(name, pct)| match pct {
+                Some(pct) => {
+                    let liters = j.output_volume_l * pct / 100.0;
+                    format!("{name} ({pct:.0}%, {liters:.1} L)")
+                }
                 None => name,
             })
             .collect();
@@ -459,16 +466,12 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         } else {
             format!(" from {}", tree_parts.join(", "))
         };
-        let yield_note = match j.yield_pct {
-            Some(pct) => format!(" ({pct:.0}% yield)"),
-            None => String::new(),
-        };
         let equipment_note = match j.equipment {
             Some(eq) if !eq.is_empty() => format!(" via {eq}"),
             _ => String::new(),
         };
         let mut summary = format!(
-            "Pressed{trees_note} to {:.1} L{yield_note}{equipment_note}",
+            "Pressed{trees_note} to {:.1} L{equipment_note}",
             j.output_volume_l
         );
         if let Some(notes) = j.notes.filter(|n| !n.is_empty()) {
@@ -852,18 +855,19 @@ pub async fn delete(
 
 // ---- juicing (picking is expressed as tree contributions here) ----
 
-/// Pulls the fixed scalar fields plus the raw tree checkbox/weight pairs
-/// out of a juicing add/edit submission. Raw `HashMap` parsing (rather
-/// than a typed `Form<T>`) is needed because the tree fields are keyed
-/// by each tree's id (`use_tree_3`, `weight_tree_3`, ...), a set that
-/// isn't known until we've looked up which trees exist.
+/// Pulls the fixed scalar fields plus the raw tree checkbox/percentage
+/// pairs out of a juicing add/edit submission. Raw `HashMap` parsing
+/// (rather than a typed `Form<T>`) is needed because the tree fields
+/// are keyed by each tree's id (`use_tree_3`, `percentage_tree_3`,
+/// ...), a set that isn't known until we've looked up which trees
+/// exist.
 struct JuicingSubmission {
     month: u32,
     day: u32,
     output_volume_l: f64,
     equipment: Option<String>,
     notes: Option<String>,
-    tree_weights: Vec<(i64, Option<f64>)>,
+    tree_percentages: Vec<(i64, f64)>,
 }
 
 fn parse_juicing_submission(
@@ -888,12 +892,21 @@ fn parse_juicing_submission(
     let equipment = get_optional("equipment");
     let notes = get_optional("notes");
 
-    let mut tree_weights = Vec::new();
+    let mut tree_percentages = Vec::new();
     for tree in all_trees {
         if raw.contains_key(&format!("use_tree_{}", tree.id)) {
-            let weight = get_optional(&format!("weight_tree_{}", tree.id))
-                .and_then(|s| s.parse::<f64>().ok());
-            tree_weights.push((tree.id, weight));
+            let percentage: f64 = get_required(&format!("percentage_tree_{}", tree.id))?.parse()?;
+            if !(0.0..=100.0).contains(&percentage) || percentage <= 0.0 {
+                anyhow::bail!("{}'s percentage must be greater than 0 and at most 100", tree.name);
+            }
+            tree_percentages.push((tree.id, percentage));
+        }
+    }
+
+    if !tree_percentages.is_empty() {
+        let total: f64 = tree_percentages.iter().map(|(_, p)| p).sum();
+        if (total - 100.0).abs() > 0.5 {
+            anyhow::bail!("tree percentages must add up to 100% (got {total:.1}%)");
         }
     }
 
@@ -903,18 +916,8 @@ fn parse_juicing_submission(
         output_volume_l,
         equipment,
         notes,
-        tree_weights,
+        tree_percentages,
     })
-}
-
-fn compute_yield_pct(output_volume_l: f64, tree_weights: &[(i64, Option<f64>)]) -> Option<f64> {
-    let total_weight: f64 = tree_weights.iter().filter_map(|(_, w)| *w).sum();
-    if total_weight > 0.0 {
-        let raw_pct = output_volume_l / total_weight * 100.0;
-        Some((raw_pct * 10.0).round() / 10.0)
-    } else {
-        None
-    }
 }
 
 pub async fn add_juicing(
@@ -928,7 +931,6 @@ pub async fn add_juicing(
     let all_trees = fetch_trees(&state.db).await?;
     let submission = parse_juicing_submission(&raw, &all_trees)?;
     let occurred_at = dates::season_date(season_year, submission.month, submission.day)?;
-    let yield_pct = compute_yield_pct(submission.output_volume_l, &submission.tree_weights);
 
     let mut tx = state.db.begin().await?;
 
@@ -944,21 +946,20 @@ pub async fn add_juicing(
     let event_id = event.last_insert_rowid();
 
     sqlx::query!(
-        "INSERT INTO juicing_events (event_id, output_volume_l, yield_pct, equipment) VALUES (?, ?, ?, ?)",
+        "INSERT INTO juicing_events (event_id, output_volume_l, equipment) VALUES (?, ?, ?)",
         event_id,
         submission.output_volume_l,
-        yield_pct,
         submission.equipment
     )
     .execute(&mut *tx)
     .await?;
 
-    for (tree_id, weight) in submission.tree_weights {
+    for (tree_id, percentage) in submission.tree_percentages {
         sqlx::query!(
-            "INSERT INTO juicing_tree_weights (event_id, tree_id, weight_kg) VALUES (?, ?, ?)",
+            "INSERT INTO juicing_tree_weights (event_id, tree_id, percentage) VALUES (?, ?, ?)",
             event_id,
             tree_id,
-            weight
+            percentage
         )
         .execute(&mut *tx)
         .await?;
@@ -991,15 +992,15 @@ pub async fn edit_juicing_fragment(
         return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
     };
 
-    let tree_weight_rows = sqlx::query!(
-        "SELECT tree_id, weight_kg FROM juicing_tree_weights WHERE event_id = ?",
+    let tree_percentage_rows = sqlx::query!(
+        r#"SELECT tree_id, percentage as "percentage!: f64" FROM juicing_tree_weights WHERE event_id = ?"#,
         event_id
     )
     .fetch_all(&state.db)
     .await?;
-    let selected: HashMap<i64, Option<f64>> = tree_weight_rows
+    let selected: HashMap<i64, f64> = tree_percentage_rows
         .into_iter()
-        .map(|r| (r.tree_id, r.weight_kg))
+        .map(|r| (r.tree_id, r.percentage))
         .collect();
 
     let all_trees = fetch_trees(&state.db).await?;
@@ -1029,7 +1030,6 @@ pub async fn update_juicing(
     let all_trees = fetch_trees(&state.db).await?;
     let submission = parse_juicing_submission(&raw, &all_trees)?;
     let occurred_at = dates::season_date(season_year, submission.month, submission.day)?;
-    let yield_pct = compute_yield_pct(submission.output_volume_l, &submission.tree_weights);
 
     let mut tx = state.db.begin().await?;
 
@@ -1044,9 +1044,8 @@ pub async fn update_juicing(
     .await?;
 
     sqlx::query!(
-        "UPDATE juicing_events SET output_volume_l = ?, yield_pct = ?, equipment = ? WHERE event_id = ?",
+        "UPDATE juicing_events SET output_volume_l = ?, equipment = ? WHERE event_id = ?",
         submission.output_volume_l,
-        yield_pct,
         submission.equipment,
         event_id
     )
@@ -1057,12 +1056,12 @@ pub async fn update_juicing(
         .execute(&mut *tx)
         .await?;
 
-    for (tree_id, weight) in submission.tree_weights {
+    for (tree_id, percentage) in submission.tree_percentages {
         sqlx::query!(
-            "INSERT INTO juicing_tree_weights (event_id, tree_id, weight_kg) VALUES (?, ?, ?)",
+            "INSERT INTO juicing_tree_weights (event_id, tree_id, percentage) VALUES (?, ?, ?)",
             event_id,
             tree_id,
-            weight
+            percentage
         )
         .execute(&mut *tx)
         .await?;
