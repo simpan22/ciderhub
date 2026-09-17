@@ -1,5 +1,7 @@
 use chrono::{Datelike, NaiveDate};
 
+use crate::models::BatchTimelineRow;
+
 /// Fixed, small palette cycled across whichever batches are selected —
 /// same spirit as the .status badge colors, just enough distinct hues
 /// to tell a handful of lines apart.
@@ -147,4 +149,186 @@ fn day_offset(iso_date: &str) -> Option<i64> {
     NaiveDate::parse_from_str(iso_date, "%Y-%m-%d")
         .ok()
         .map(|d| d.num_days_from_ce() as i64)
+}
+
+// Color encodes phase here, not batch identity (the opposite of
+// render_line_chart) — every bar is the same "thing" (a batch), so
+// color is free to carry which part of the process a stretch of time
+// was in; the row label already carries batch identity.
+const PHASE_FERMENTING: &str = "#5b7a4f";
+const PHASE_CONDITIONING: &str = "#a3623e";
+const PHASE_BOTTLED: &str = "#2c3e50";
+const PHASE_FAILED: &str = "#a33333";
+
+const TIMELINE_WIDTH: f64 = 640.0;
+const TIMELINE_MARGIN_LEFT: f64 = 90.0;
+const TIMELINE_MARGIN_RIGHT: f64 = 20.0;
+const TIMELINE_MARGIN_TOP: f64 = 16.0;
+const TIMELINE_ROW_H: f64 = 34.0;
+const TIMELINE_BAR_H: f64 = 16.0;
+const TIMELINE_AXIS_PAD_DAYS: i64 = 3;
+
+struct ResolvedRow {
+    code: String,
+    start_day: i64,
+    end_day: i64,
+    racking_day: Option<i64>,
+    bottling_day: Option<i64>,
+    failed_day: Option<i64>,
+}
+
+/// Renders the Season overview: one horizontal row per batch, spanning
+/// from its start to its end (failed/bottled/today), with colored
+/// segments for each phase it has actually passed through. Every row
+/// shares one x-axis, per the todo's explicit "duplicated timelines,
+/// same interval" requirement.
+pub fn render_season_timeline(rows: &[BatchTimelineRow]) -> String {
+    let mut resolved = Vec::new();
+    let mut min_day = i64::MAX;
+    let mut max_day = i64::MIN;
+    let mut earliest_label: Option<&str> = None;
+    let mut latest_label: Option<&str> = None;
+
+    for row in rows {
+        let (Some(start_day), Some(end_day)) = (day_offset(&row.start), day_offset(&row.end)) else {
+            continue;
+        };
+        if start_day < min_day {
+            min_day = start_day;
+            earliest_label = Some(&row.start);
+        }
+        if end_day > max_day {
+            max_day = end_day;
+            latest_label = Some(&row.end);
+        }
+        resolved.push(ResolvedRow {
+            code: row.code.clone(),
+            start_day,
+            end_day,
+            racking_day: row.racking_at.as_deref().and_then(day_offset),
+            bottling_day: row.bottling_at.as_deref().and_then(day_offset),
+            failed_day: row.failed_at.as_deref().and_then(day_offset),
+        });
+    }
+
+    if resolved.is_empty() {
+        return "<p class=\"muted\">No batches with logged events yet.</p>".to_string();
+    }
+
+    let axis_min = min_day - TIMELINE_AXIS_PAD_DAYS;
+    let axis_max = (max_day + TIMELINE_AXIS_PAD_DAYS).max(axis_min + 1);
+    let axis_span = (axis_max - axis_min) as f64;
+
+    let plot_w = TIMELINE_WIDTH - TIMELINE_MARGIN_LEFT - TIMELINE_MARGIN_RIGHT;
+    let x_of = |day: i64| TIMELINE_MARGIN_LEFT + (day - axis_min) as f64 / axis_span * plot_w;
+
+    let axis_y = TIMELINE_MARGIN_TOP + resolved.len() as f64 * TIMELINE_ROW_H + 6.0;
+    let height = axis_y + 20.0;
+
+    let mut svg = format!(
+        r#"<svg viewBox="0 0 {TIMELINE_WIDTH} {height}" xmlns="http://www.w3.org/2000/svg" class="chart-svg">"#
+    );
+
+    for (i, r) in resolved.iter().enumerate() {
+        let y = TIMELINE_MARGIN_TOP + i as f64 * TIMELINE_ROW_H;
+        let cy = y + TIMELINE_BAR_H / 2.0;
+
+        svg.push_str(&format!(
+            r##"<text x="{x:.1}" y="{ty:.1}" font-size="12" fill="#3a352c" text-anchor="end">{code}</text>"##,
+            x = TIMELINE_MARGIN_LEFT - 8.0,
+            ty = cy + 4.0,
+            code = r.code
+        ));
+
+        // Zero-width span (e.g. a batch whose only event is its own
+        // "failed" event) — a bar has no width to draw, so mark the
+        // point with a dot instead, same fallback render_line_chart
+        // uses for a single-point series.
+        if r.start_day == r.end_day {
+            let color = if r.failed_day.is_some() {
+                PHASE_FAILED
+            } else if r.bottling_day.is_some() {
+                PHASE_BOTTLED
+            } else {
+                PHASE_FERMENTING
+            };
+            svg.push_str(&format!(
+                r#"<circle cx="{cx:.1}" cy="{cy:.1}" r="5" fill="{color}" />"#,
+                cx = x_of(r.start_day)
+            ));
+            continue;
+        }
+
+        if let Some(failed_day) = r.failed_day {
+            // Failure overrides every other phase for the bar's whole
+            // span, matching compute_status's override — even if a
+            // bottling event exists somewhere in the data, it isn't
+            // reflected here.
+            draw_segment(&mut svg, x_of(r.start_day), x_of(failed_day), y, PHASE_FAILED);
+            continue;
+        }
+
+        // Fermenting: start until racking (or until the bar's end, if
+        // never racked). Clipped to the bar's end so an out-of-order
+        // racking date logged after bottling can't draw past it.
+        let fermenting_end = r.racking_day.unwrap_or(r.end_day).clamp(r.start_day, r.end_day);
+        draw_segment(&mut svg, x_of(r.start_day), x_of(fermenting_end), y, PHASE_FERMENTING);
+
+        if let Some(racking_day) = r.racking_day {
+            let conditioning_start = racking_day.clamp(r.start_day, r.end_day);
+            if r.end_day > conditioning_start {
+                draw_segment(&mut svg, x_of(conditioning_start), x_of(r.end_day), y, PHASE_CONDITIONING);
+            }
+        }
+
+        // Bottling is a moment, not a phase with duration — a thin
+        // end-cap marker, not a shaded span.
+        if let Some(bottling_day) = r.bottling_day {
+            svg.push_str(&format!(
+                r#"<circle cx="{cx:.1}" cy="{cy:.1}" r="4" fill="{PHASE_BOTTLED}" />"#,
+                cx = x_of(bottling_day)
+            ));
+        }
+    }
+
+    svg.push_str(&format!(
+        r##"<line x1="{x0:.1}" y1="{axis_y:.1}" x2="{x1:.1}" y2="{axis_y:.1}" stroke="#8899aa" stroke-width="1" />"##,
+        x0 = TIMELINE_MARGIN_LEFT,
+        x1 = TIMELINE_WIDTH - TIMELINE_MARGIN_RIGHT
+    ));
+    if let Some(label) = earliest_label {
+        svg.push_str(&format!(
+            r##"<text x="{x:.1}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="start">{label}</text>"##,
+            x = TIMELINE_MARGIN_LEFT,
+            y = axis_y + 16.0
+        ));
+    }
+    if let Some(label) = latest_label {
+        svg.push_str(&format!(
+            r##"<text x="{x:.1}" y="{y:.1}" font-size="11" fill="#746f66" text-anchor="end">{label}</text>"##,
+            x = TIMELINE_WIDTH - TIMELINE_MARGIN_RIGHT,
+            y = axis_y + 16.0
+        ));
+    }
+
+    svg.push_str("</svg>");
+
+    let legend = format!(
+        r##"<div class="chart-legend">
+            <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:{PHASE_FERMENTING}"></span>Fermenting</span>
+            <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:{PHASE_CONDITIONING}"></span>Conditioning</span>
+            <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:{PHASE_BOTTLED}"></span>Bottled</span>
+            <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:{PHASE_FAILED}"></span>Failed</span>
+        </div>"##
+    );
+
+    format!("{svg}{legend}")
+}
+
+fn draw_segment(svg: &mut String, x0: f64, x1: f64, y: f64, color: &str) {
+    let (x0, x1) = if x1 >= x0 { (x0, x1) } else { (x1, x0) };
+    svg.push_str(&format!(
+        r#"<rect x="{x0:.1}" y="{y:.1}" width="{w:.1}" height="{TIMELINE_BAR_H:.1}" fill="{color}" rx="2" />"#,
+        w = x1 - x0
+    ));
 }

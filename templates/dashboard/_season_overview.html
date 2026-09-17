@@ -1,0 +1,13 @@
+<div class="card" id="season-overview">
+    <h2>Season overview</h2>
+    <form class="inline-form" hx-get="/dashboard/season-overview" hx-trigger="change" hx-target="#season-overview" hx-swap="outerHTML">
+        <label>Season
+            <select name="season_id">
+                {% for s in seasons %}
+                <option value="{{ s.id }}" {% if s.selected %}selected{% endif %}>{{ s.year }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </form>
+    {{ timeline_svg|safe }}
+</div>

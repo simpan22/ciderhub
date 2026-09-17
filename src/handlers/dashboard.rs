@@ -1,11 +1,17 @@
+use std::collections::HashMap;
+
 use askama::Template;
 use askama_web::WebTemplate;
-use axum::extract::{RawQuery, State};
+use axum::extract::{Query, RawQuery, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 
-use crate::charts::{render_line_chart, Series};
-use crate::models::{BatchOption, ChartSection, MetricOption};
+use serde::Deserialize;
+
+use crate::charts::{render_line_chart, render_season_timeline, Series};
+use crate::dates;
+use crate::error::AppError;
+use crate::models::{BatchOption, BatchTimelineRow, ChartSection, MetricOption, SeasonOption};
 use crate::state::AppState;
 
 const METRICS: [(&str, &str); 5] = [
@@ -137,6 +143,143 @@ struct IndexTemplate {
     batches: Vec<BatchOption>,
     metrics: Vec<MetricOption>,
     charts: Vec<ChartSection>,
+    seasons: Vec<SeasonOption>,
+    timeline_svg: String,
+}
+
+#[derive(Template, WebTemplate)]
+#[template(path = "dashboard/_season_overview.html")]
+struct SeasonOverviewTemplate {
+    seasons: Vec<SeasonOption>,
+    timeline_svg: String,
+}
+
+#[derive(Deserialize)]
+pub struct SeasonOverviewQuery {
+    season_id: Option<i64>,
+}
+
+/// One batch's phase boundaries, resolved from its events — the start
+/// (first event of any kind), the first racking/bottling/failed event
+/// dates if present, and the effective end of its bar (failed, else
+/// bottled, else today). Batches with no events yet are left out
+/// entirely, same reasoning as batch-start-date's `None`: there's
+/// nothing to place them at.
+async fn fetch_batch_phases(db: &sqlx::SqlitePool, season_id: i64) -> Result<Vec<BatchTimelineRow>, sqlx::Error> {
+    let batches = sqlx::query!(
+        r#"SELECT id as "id!", code FROM batches WHERE season_id = ? ORDER BY code"#,
+        season_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    if batches.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let events = sqlx::query!(
+        r#"
+        SELECT e.batch_id as "batch_id!", e.event_type, e.occurred_at
+        FROM events e
+        JOIN batches b ON b.id = e.batch_id
+        WHERE b.season_id = ?
+        ORDER BY e.occurred_at
+        "#,
+        season_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    #[derive(Default)]
+    struct Acc {
+        start: Option<String>,
+        racking_at: Option<String>,
+        bottling_at: Option<String>,
+        failed_at: Option<String>,
+    }
+
+    let mut by_batch: HashMap<i64, Acc> = HashMap::new();
+    for row in events {
+        let acc = by_batch.entry(row.batch_id).or_default();
+        if acc.start.is_none() {
+            acc.start = Some(row.occurred_at.clone());
+        }
+        match row.event_type.as_str() {
+            "racking" if acc.racking_at.is_none() => acc.racking_at = Some(row.occurred_at),
+            "bottling" if acc.bottling_at.is_none() => acc.bottling_at = Some(row.occurred_at),
+            "failed" if acc.failed_at.is_none() => acc.failed_at = Some(row.occurred_at),
+            _ => {}
+        }
+    }
+
+    let today = dates::today_iso();
+    let rows = batches
+        .into_iter()
+        .filter_map(|b| {
+            let acc = by_batch.remove(&b.id)?;
+            let start = acc.start?;
+            // `.max(start.clone())` guards against a future-dated event
+            // (typo, or a deliberately backdated-forward entry) making
+            // an in-progress batch's `end` (today) land before its own
+            // `start` — every consumer of this row assumes end >=
+            // start. ISO `YYYY-MM-DD` strings compare lexicographically
+            // in chronological order, so plain `max` is correct here.
+            let end = acc
+                .failed_at
+                .clone()
+                .or_else(|| acc.bottling_at.clone())
+                .unwrap_or_else(|| today.clone())
+                .max(start.clone());
+            Some(BatchTimelineRow {
+                code: b.code,
+                start,
+                racking_at: acc.racking_at,
+                bottling_at: acc.bottling_at,
+                failed_at: acc.failed_at,
+                end,
+            })
+        })
+        .collect();
+
+    Ok(rows)
+}
+
+/// Shared by the full dashboard render and the htmx fragment endpoint
+/// so both always agree on which season is selected by default (the
+/// most recent one) and how the timeline for it is built.
+async fn build_season_overview(
+    db: &sqlx::SqlitePool,
+    season_id: Option<i64>,
+) -> Result<(Vec<SeasonOption>, String), sqlx::Error> {
+    let season_rows = sqlx::query!(r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
+        .fetch_all(db)
+        .await?;
+
+    let selected_season_id = season_id.or_else(|| season_rows.first().map(|s| s.id));
+
+    let seasons = season_rows
+        .iter()
+        .map(|s| SeasonOption {
+            id: s.id,
+            year: s.year,
+            selected: Some(s.id) == selected_season_id,
+        })
+        .collect();
+
+    let timeline_svg = match selected_season_id {
+        Some(id) => render_season_timeline(&fetch_batch_phases(db, id).await?),
+        None => "<p class=\"muted\">No seasons yet.</p>".to_string(),
+    };
+
+    Ok((seasons, timeline_svg))
+}
+
+pub async fn season_overview(
+    State(state): State<AppState>,
+    Query(query): Query<SeasonOverviewQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let (seasons, timeline_svg) = build_season_overview(&state.db, query.season_id).await?;
+    Ok(SeasonOverviewTemplate { seasons, timeline_svg })
 }
 
 async fn build_charts(
@@ -218,10 +361,14 @@ pub async fn index(
         })
         .collect();
 
+    let (seasons, timeline_svg) = build_season_overview(&state.db, None).await?;
+
     Ok(IndexTemplate {
         batches,
         metrics,
         charts,
+        seasons,
+        timeline_svg,
     }
     .into_response())
 }

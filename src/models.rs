@@ -220,3 +220,23 @@ pub struct ChartSection {
     pub label: &'static str,
     pub svg: String,
 }
+
+pub struct SeasonOption {
+    pub id: i64,
+    pub year: i64,
+    pub selected: bool,
+}
+
+/// One batch's resolved phase boundaries for the Season overview
+/// timeline. Already reduced to plain dates by the query layer —
+/// `render_season_timeline` only turns these into x-coordinates, it
+/// doesn't know anything about events or status.
+pub struct BatchTimelineRow {
+    pub code: String,
+    pub start: String,
+    pub racking_at: Option<String>,
+    pub bottling_at: Option<String>,
+    pub failed_at: Option<String>,
+    /// `failed_at`, else `bottling_at`, else today — where the bar ends.
+    pub end: String,
+}

@@ -30,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(handlers::dashboard::index))
+        .route("/dashboard/season-overview", get(handlers::dashboard::season_overview))
         .route("/healthz", get(handlers::dashboard::healthz))
         .route(
             "/seasons",

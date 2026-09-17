@@ -25,3 +25,20 @@ When creating a new batch, the start date should not be asked for. Instead the s
 
 # Feature: Batch naming (Status: Spec ready for review — docs/specs/batch-code-prefill.md)
 Batch ids should be prefilled with <year>-<batch letter> (e.g. 2026-A then 2026-B etc) but you should be able to override it.
+
+# Feature: Dashboard timeline (Status: Spec ready for review — docs/specs/dashboard-timeline.md)
+I want the dashboard to have a visualization where each batch of a season is represented as a horizontal bar on a timeline. The bar should start at the batch start date and end at the bottling date. The different batches should lie on a timeline every batch on its own row. Even though the timelines are duplicated they should represent the same time interval (some time before the start of the first batch -> some tome after the last bottling). We will call this view the Season overview. The bars should have labels according to the batch they represent and the different phases of the batch should be represented by different colors.
+
+# Feature: Batch list changes (Status: planning)
+I want the Batch list to have the following items:
+ - Batch id
+ - Start date (first event date)
+ - Bottling date
+ - Trees used (only a list no ratios)
+ - Alcohol percentage (based on first SG measurement if SG measurement was made the same date as juicing otherwise ommited)
+ - How long it has been stored since bottling (if it has been bottled)
+ - A list of additives (just a list, not how much of each or ratios)
+
+# Feature: Juicing event form changes (Status: planning)
+Instead of asking for kg of apples by tree, we should ask for a percentage per tree. This can be a required field. Default to an even distribution for existing entries in the database.
+This way we can calculate the liters per tree based on the total output of juicing and the percentage per tree.
