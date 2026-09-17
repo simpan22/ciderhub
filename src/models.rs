@@ -193,3 +193,13 @@ pub struct AddFailureForm {
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }
+
+#[derive(Deserialize)]
+pub struct AddTastingForm {
+    pub occurred_at: String,
+    pub score: i64,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub tasting_notes: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}

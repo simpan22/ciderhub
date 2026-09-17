@@ -135,6 +135,18 @@ async fn main() -> anyhow::Result<()> {
             "/batches/{id}/events/failure",
             axum::routing::post(handlers::batches::add_failure),
         )
+        .route(
+            "/batches/{id}/events/tasting",
+            axum::routing::post(handlers::batches::add_tasting),
+        )
+        .route(
+            "/batches/{batch_id}/events/tasting/{event_id}/edit",
+            get(handlers::batches::edit_tasting_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/tasting/{event_id}",
+            axum::routing::put(handlers::batches::update_tasting),
+        )
         .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))
         .layer(axum::middleware::from_fn(handlers::auth::require_auth))

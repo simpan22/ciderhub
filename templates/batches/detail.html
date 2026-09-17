@@ -110,4 +110,20 @@
         <button type="submit">Add</button>
     </form>
 </details>
+
+{% if batch.status == "bottled" %}
+<details class="card" id="log-tasting">
+    <summary>Log tasting</summary>
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/tasting" hx-target="#batch-timeline" hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'tasting')">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Score (0-10) <input type="number" min="0" max="10" step="1" name="score" required></label>
+            <label>Tasting notes <input type="text" name="tasting_notes"></label>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
+        <button type="submit">Add</button>
+    </form>
+</details>
+{% endif %}
 {% endblock %}

@@ -11,8 +11,8 @@ use crate::dates;
 use crate::error::AppError;
 use crate::models::{
     AddAdditiveForm, AddBottlingForm, AddFailureForm, AddMeasurementForm, AddRackingForm,
-    BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree, TreeWeightField,
-    TreeYield, Unit, UnitOption, UpdateBatchForm,
+    AddTastingForm, BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree,
+    TreeWeightField, TreeYield, Unit, UnitOption, UpdateBatchForm,
 };
 use crate::state::AppState;
 
@@ -159,6 +159,17 @@ struct EditBottlingTemplate {
     bottle_count: i64,
     bottle_size_ml: i64,
     carbonation_method: Option<String>,
+    notes: Option<String>,
+}
+
+#[derive(Template, WebTemplate)]
+#[template(path = "batches/_edit_tasting.html")]
+struct EditTastingTemplate {
+    batch_id: i64,
+    event_id: i64,
+    occurred_at: String,
+    score: i64,
+    tasting_notes: Option<String>,
     notes: Option<String>,
 }
 
@@ -348,6 +359,18 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
     .fetch_all(db)
     .await?;
 
+    let tastings = sqlx::query!(
+        r#"
+        SELECT e.id as "event_id!", e.occurred_at, e.notes, te.score, te.tasting_notes
+        FROM tasting_events te
+        JOIN events e ON e.id = te.event_id
+        WHERE e.batch_id = ?
+        "#,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
     let tree_yields = sqlx::query_as!(
         TreeYield,
         r#"
@@ -498,6 +521,23 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             occurred_at: f.occurred_at,
             kind_label: "Failed",
             kind_slug: "failed",
+            summary,
+        });
+    }
+
+    for t in tastings {
+        let mut summary = format!("Scored {}/10", t.score);
+        if let Some(tasting_notes) = t.tasting_notes.filter(|n| !n.is_empty()) {
+            summary.push_str(&format!(", {tasting_notes}"));
+        }
+        if let Some(notes) = t.notes.filter(|n| !n.is_empty()) {
+            summary.push_str(&format!(" — {notes}"));
+        }
+        timeline.push(TimelineRow {
+            event_id: t.event_id,
+            occurred_at: t.occurred_at,
+            kind_label: "Tasting",
+            kind_slug: "tasting",
             summary,
         });
     }
@@ -1328,4 +1368,103 @@ pub async fn add_failure(
         );
 
     Ok(Html(format!("{meta_html}{timeline_html}")).into_response())
+}
+
+// ---- tasting ----
+
+pub async fn add_tasting(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddTastingForm>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    let event = sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'tasting', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let event_id = event.last_insert_rowid();
+
+    sqlx::query!(
+        "INSERT INTO tasting_events (event_id, score, tasting_notes) VALUES (?, ?, ?)",
+        event_id,
+        form.score,
+        form.tasting_notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    let timeline = fetch_timeline(&state.db, id).await?;
+    Ok(timeline)
+}
+
+pub async fn edit_tasting_fragment(
+    State(state): State<AppState>,
+    Path((batch_id, event_id)): Path<(i64, i64)>,
+) -> Result<Response, AppError> {
+    let row = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, te.score, te.tasting_notes, e.notes
+        FROM tasting_events te
+        JOIN events e ON e.id = te.event_id
+        WHERE e.id = ? AND e.batch_id = ?
+        "#,
+        event_id,
+        batch_id
+    )
+    .fetch_optional(&state.db)
+    .await?;
+
+    let Some(row) = row else {
+        return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
+    };
+
+    Ok(EditTastingTemplate {
+        batch_id,
+        event_id,
+        occurred_at: row.occurred_at,
+        score: row.score,
+        tasting_notes: row.tasting_notes,
+        notes: row.notes,
+    }
+    .into_response())
+}
+
+pub async fn update_tasting(
+    State(state): State<AppState>,
+    Path((batch_id, event_id)): Path<(i64, i64)>,
+    Form(form): Form<AddTastingForm>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    sqlx::query!(
+        "UPDATE events SET occurred_at = ?, notes = ? WHERE id = ? AND batch_id = ?",
+        form.occurred_at,
+        form.notes,
+        event_id,
+        batch_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query!(
+        "UPDATE tasting_events SET score = ?, tasting_notes = ? WHERE event_id = ?",
+        form.score,
+        form.tasting_notes,
+        event_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    let timeline = fetch_timeline(&state.db, batch_id).await?;
+    Ok(timeline)
 }
