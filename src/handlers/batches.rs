@@ -4,15 +4,15 @@ use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{Path, State};
 use axum::http::{HeaderValue, StatusCode};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
 
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{
-    AddAdditiveForm, AddBottlingForm, AddMeasurementForm, AddRackingForm, BatchListItem,
-    MonthOption, NewBatchForm, Season, TimelineRow, Tree, TreeWeightField, TreeYield,
-    UpdateBatchForm,
+    AddAdditiveForm, AddBottlingForm, AddFailureForm, AddMeasurementForm, AddRackingForm,
+    BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree, TreeWeightField,
+    TreeYield, Unit, UnitOption, UpdateBatchForm,
 };
 use crate::state::AppState;
 
@@ -23,17 +23,23 @@ fn compute_status<'a>(event_types: impl IntoIterator<Item = &'a str>) -> &'stati
     let mut has_fermenting_signal = false;
     let mut has_racking = false;
     let mut has_bottling = false;
+    let mut has_failed = false;
 
     for t in event_types {
         match t {
             "juicing" | "additive" | "measurement" => has_fermenting_signal = true,
             "racking" => has_racking = true,
             "bottling" => has_bottling = true,
+            "failed" => has_failed = true,
             _ => {}
         }
     }
 
-    if has_bottling {
+    // Failure overrides every other signal: a fermenting batch that
+    // failed shouldn't still read as "fermenting."
+    if has_failed {
+        "failed"
+    } else if has_bottling {
         "bottled"
     } else if has_racking {
         "conditioning"
@@ -65,6 +71,7 @@ struct ListTemplate {
 #[template(path = "batches/_meta.html")]
 struct MetaTemplate {
     batch: BatchDetail,
+    today: String,
 }
 
 #[derive(Template, WebTemplate)]
@@ -87,6 +94,7 @@ struct DetailTemplate {
     tree_yields: Vec<TreeYield>,
     timeline: Vec<TimelineRow>,
     tree_fields: Vec<TreeWeightField>,
+    units: Vec<Unit>,
     months: Vec<MonthOption>,
     today_day: u32,
     today: String,
@@ -113,7 +121,7 @@ struct EditAdditiveTemplate {
     occurred_at: String,
     substance: String,
     amount: f64,
-    unit: String,
+    units: Vec<UnitOption>,
     notes: Option<String>,
 }
 
@@ -167,6 +175,12 @@ async fn fetch_trees(db: &sqlx::SqlitePool) -> Result<Vec<Tree>, sqlx::Error> {
     )
     .fetch_all(db)
     .await
+}
+
+async fn fetch_units(db: &sqlx::SqlitePool) -> Result<Vec<Unit>, sqlx::Error> {
+    sqlx::query_as!(Unit, r#"SELECT id as "id!", name FROM units ORDER BY name"#)
+        .fetch_all(db)
+        .await
 }
 
 /// Builds the tree checkbox list for the juicing form: `selected` maps a
@@ -234,7 +248,10 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
         notes: row.notes,
     };
 
-    Ok(Some(MetaTemplate { batch }))
+    Ok(Some(MetaTemplate {
+        batch,
+        today: dates::today_iso(),
+    }))
 }
 
 async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<TimelineTemplate, sqlx::Error> {
@@ -287,9 +304,10 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
 
     let additives = sqlx::query!(
         r#"
-        SELECT e.id as "event_id!", e.occurred_at, e.notes, ae.substance, ae.amount, ae.unit
+        SELECT e.id as "event_id!", e.occurred_at, e.notes, ae.substance, ae.amount, u.name as unit
         FROM additive_events ae
         JOIN events e ON e.id = ae.event_id
+        JOIN units u ON u.id = ae.unit_id
         WHERE e.batch_id = ?
         "#,
         batch_id
@@ -316,6 +334,15 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         JOIN events e ON e.id = be.event_id
         WHERE e.batch_id = ?
         "#,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
+    // No typed table: a failure event's only payload is the shared
+    // events.notes column (the "why," if given).
+    let failures = sqlx::query!(
+        r#"SELECT id as "event_id!", occurred_at, notes FROM events WHERE batch_id = ? AND event_type = 'failed'"#,
         batch_id
     )
     .fetch_all(db)
@@ -461,6 +488,20 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
         });
     }
 
+    for f in failures {
+        let summary = match f.notes.filter(|n| !n.is_empty()) {
+            Some(notes) => notes,
+            None => "Batch marked as failed".to_string(),
+        };
+        timeline.push(TimelineRow {
+            event_id: f.event_id,
+            occurred_at: f.occurred_at,
+            kind_label: "Failed",
+            kind_slug: "failed",
+            summary,
+        });
+    }
+
     timeline.sort_by(|a, b| a.occurred_at.cmp(&b.occurred_at));
 
     Ok(TimelineTemplate {
@@ -545,6 +586,7 @@ pub async fn detail(
     let timeline = fetch_timeline(&state.db, id).await?;
     let trees = fetch_trees(&state.db).await?;
     let tree_fields = build_tree_fields(&trees, &HashMap::new());
+    let units = fetch_units(&state.db).await?;
 
     Ok(DetailTemplate {
         batch_id: meta.batch.id,
@@ -552,6 +594,7 @@ pub async fn detail(
         tree_yields: timeline.tree_yields,
         timeline: timeline.timeline,
         tree_fields,
+        units,
         months: dates::month_options(),
         today_day: dates::today_day(),
         today: dates::today_iso(),
@@ -849,11 +892,11 @@ pub async fn add_additive(
     let event_id = event.last_insert_rowid();
 
     sqlx::query!(
-        "INSERT INTO additive_events (event_id, substance, amount, unit) VALUES (?, ?, ?, ?)",
+        "INSERT INTO additive_events (event_id, substance, amount, unit_id) VALUES (?, ?, ?, ?)",
         event_id,
         form.substance,
         form.amount,
-        form.unit
+        form.unit_id
     )
     .execute(&mut *tx)
     .await?;
@@ -870,7 +913,7 @@ pub async fn edit_additive_fragment(
 ) -> Result<Response, AppError> {
     let row = sqlx::query!(
         r#"
-        SELECT e.occurred_at, ae.substance, ae.amount, ae.unit, e.notes
+        SELECT e.occurred_at, ae.substance, ae.amount, ae.unit_id, e.notes
         FROM additive_events ae
         JOIN events e ON e.id = ae.event_id
         WHERE e.id = ? AND e.batch_id = ?
@@ -885,13 +928,23 @@ pub async fn edit_additive_fragment(
         return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
     };
 
+    let all_units = fetch_units(&state.db).await?;
+    let units = all_units
+        .into_iter()
+        .map(|u| UnitOption {
+            selected: Some(u.id) == row.unit_id,
+            id: u.id,
+            name: u.name,
+        })
+        .collect();
+
     Ok(EditAdditiveTemplate {
         batch_id,
         event_id,
         occurred_at: row.occurred_at,
         substance: row.substance,
         amount: row.amount,
-        unit: row.unit,
+        units,
         notes: row.notes,
     }
     .into_response())
@@ -915,10 +968,10 @@ pub async fn update_additive(
     .await?;
 
     sqlx::query!(
-        "UPDATE additive_events SET substance = ?, amount = ?, unit = ? WHERE event_id = ?",
+        "UPDATE additive_events SET substance = ?, amount = ?, unit_id = ? WHERE event_id = ?",
         form.substance,
         form.amount,
-        form.unit,
+        form.unit_id,
         event_id
     )
     .execute(&mut *tx)
@@ -1237,4 +1290,42 @@ pub async fn update_bottling(
 
     let timeline = fetch_timeline(&state.db, batch_id).await?;
     Ok(timeline)
+}
+
+// ---- failure (no typed table — just an events-spine row) ----
+
+pub async fn add_failure(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddFailureForm>,
+) -> Result<Response, AppError> {
+    sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'failed', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&state.db)
+    .await?;
+
+    let Some(meta) = fetch_meta(&state.db, id).await? else {
+        return Ok((StatusCode::NOT_FOUND, "batch not found").into_response());
+    };
+    let timeline = fetch_timeline(&state.db, id).await?;
+
+    // The form's own hx-target is #batch-meta (the status badge lives
+    // there); the timeline also needs refreshing since the failure event
+    // shows up there too, so it rides along as an out-of-band swap in
+    // the same response rather than needing a second round-trip.
+    let meta_html = meta.render().map_err(anyhow::Error::from)?;
+    let timeline_html = timeline
+        .render()
+        .map_err(anyhow::Error::from)?
+        .replacen(
+            "id=\"batch-timeline\"",
+            "id=\"batch-timeline\" hx-swap-oob=\"true\"",
+            1,
+        );
+
+    Ok(Html(format!("{meta_html}{timeline_html}")).into_response())
 }

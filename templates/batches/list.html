@@ -37,7 +37,7 @@
             <td><a href="/batches/{{ b.id }}">{{ b.code }}</a></td>
             <td>{{ b.name.as_deref().unwrap_or("—") }}</td>
             <td>{{ b.season_year }}</td>
-            <td><span class="status">{{ b.status }}</span></td>
+            <td><span class="status status--{{ b.status }}">{{ b.status }}</span></td>
         </tr>
         {% endfor %}
     </tbody>

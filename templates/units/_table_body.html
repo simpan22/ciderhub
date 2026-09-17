@@ -1,0 +1,25 @@
+{% for row in rows %}
+{% if row.editing %}
+<tr>
+    <td colspan="2">
+        <form class="inline-form" hx-put="/units/{{ row.unit.id }}" hx-target="#units-table-body" hx-swap="innerHTML">
+            <input type="text" name="name" value="{{ row.unit.name }}" required>
+            <button type="submit">Save</button>
+            <button type="button" hx-get="/units/table" hx-target="#units-table-body" hx-swap="innerHTML">Cancel</button>
+        </form>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td>{{ row.unit.name }}</td>
+    <td class="actions">
+        <button hx-get="/units/{{ row.unit.id }}/edit" hx-target="#units-table-body" hx-swap="innerHTML">Edit</button>
+        {% if row.in_use %}
+        <span class="muted">in use</span>
+        {% else %}
+        <button class="danger" hx-delete="/units/{{ row.unit.id }}" hx-target="#units-table-body" hx-swap="innerHTML" hx-confirm="Delete this unit?">Delete</button>
+        {% endif %}
+    </td>
+</tr>
+{% endif %}
+{% endfor %}

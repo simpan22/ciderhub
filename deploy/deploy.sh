@@ -13,6 +13,12 @@ SERVICE_NAME="ciderhub"
 cd "$(dirname "$0")/.."
 
 echo "==> Building release binary"
+# sqlx::migrate!() tracks individual migration file paths but doesn't
+# reliably detect *new* files added to the migrations/ directory, so a
+# cached build can silently ship without a just-added migration
+# embedded. Touching the file with the macro invocation forces cargo to
+# re-run it (and re-scan the directory) on every deploy.
+touch src/db.rs
 cargo build --release
 
 echo "==> Uploading binary"

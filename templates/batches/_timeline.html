@@ -22,9 +22,11 @@
                 <span class="timeline__kind">{{ row.kind_label }}</span>
                 <span class="timeline__summary">{{ row.summary }}</span>
             </span>
+            {% if row.kind_slug != "failed" %}
             <button type="button" class="timeline__edit"
                     hx-get="/batches/{{ batch_id }}/events/{{ row.kind_slug }}/{{ row.event_id }}/edit"
                     hx-target="#event-{{ row.event_id }}" hx-swap="outerHTML">Edit</button>
+            {% endif %}
         </li>
         {% endfor %}
     </ol>

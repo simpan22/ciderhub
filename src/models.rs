@@ -34,6 +34,23 @@ pub struct SeasonForm {
 }
 
 #[derive(sqlx::FromRow)]
+pub struct Unit {
+    pub id: i64,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+pub struct UnitForm {
+    pub name: String,
+}
+
+pub struct UnitOption {
+    pub id: i64,
+    pub name: String,
+    pub selected: bool,
+}
+
+#[derive(sqlx::FromRow)]
 pub struct Tree {
     pub id: i64,
     pub name: String,
@@ -122,7 +139,7 @@ pub struct AddAdditiveForm {
     pub occurred_at: String,
     pub substance: String,
     pub amount: f64,
-    pub unit: String,
+    pub unit_id: i64,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }
@@ -166,6 +183,13 @@ pub struct AddBottlingForm {
     pub bottle_size_ml: i64,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub carbonation_method: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct AddFailureForm {
+    pub occurred_at: String,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }

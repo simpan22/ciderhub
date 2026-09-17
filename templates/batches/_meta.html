@@ -1,12 +1,20 @@
 <section class="card" id="batch-meta">
     <h2>Batch details</h2>
     <p class="muted">
-        {{ batch.season_year }} · <span class="status">{{ batch.status }}</span>
+        {{ batch.season_year }} · <span class="status status--{{ batch.status }}">{{ batch.status }}</span>
     </p>
     <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
         <label>Name <input type="text" name="name" value="{{ batch.name.as_deref().unwrap_or("") }}" placeholder="optional"></label>
         <label>Notes <input type="text" name="notes" value="{{ batch.notes.as_deref().unwrap_or("") }}"></label>
         <button type="submit">Save</button>
     </form>
+    {% if batch.status != "failed" %}
+    <form class="inline-form" hx-post="/batches/{{ batch.id }}/events/failure" hx-target="#batch-meta" hx-swap="outerHTML"
+          hx-confirm="Mark this batch as failed?">
+        <input type="hidden" name="occurred_at" value="{{ today }}">
+        <label>Reason <input type="text" name="notes" placeholder="optional, e.g. infection"></label>
+        <button type="submit" class="danger">Mark as failed</button>
+    </form>
+    {% endif %}
     <button class="danger" hx-delete="/batches/{{ batch.id }}" hx-confirm="Delete this batch and all its logged events? This cannot be undone.">Delete batch</button>
 </section>

@@ -270,6 +270,11 @@ button.danger {
     text-transform: capitalize;
 }
 
+.status--failed {
+    background: #f3d9d9;
+    color: #a33;
+}
+
 /* Batch timeline */
 
 .yield-list {

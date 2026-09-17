@@ -3,7 +3,7 @@
 {% block title %}CiderHub — {{ batch.code }}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<section class="page-header" data-season-year="{{ batch.season_year }}">
     <h1>{{ batch.code }}{% if let Some(name) = batch.name %} — {{ name }}{% endif %}</h1>
 </section>
 
@@ -11,10 +11,10 @@
 
 {% include "batches/_timeline.html" %}
 
-<details class="card">
+<details class="card" id="log-juicing">
     <summary>Log juicing</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/juicing" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'juicing')">
         <div class="log-form__fields">
             <label>Month
                 <select name="month">
@@ -41,25 +41,34 @@
     </form>
 </details>
 
-<details class="card">
+<details class="card" id="log-additive">
     <summary>Log additive</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/additive" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'additive')">
         <div class="log-form__fields">
             <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
             <label>Substance <input type="text" name="substance" placeholder="e.g. Nottingham ale yeast" required></label>
             <label>Amount <input type="number" step="0.01" min="0" name="amount" required></label>
-            <label>Unit <input type="text" name="unit" placeholder="g, tsp, tablets..." required></label>
+            <label>Unit
+                <select name="unit_id" required>
+                    {% if units.is_empty() %}
+                    <option value="" disabled selected>no units yet — add one on the Units page</option>
+                    {% endif %}
+                    {% for u in units %}
+                    <option value="{{ u.id }}">{{ u.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label>Notes <input type="text" name="notes"></label>
         </div>
         <button type="submit">Add</button>
     </form>
 </details>
 
-<details class="card">
+<details class="card" id="log-measurement">
     <summary>Log measurement</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/measurement" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'measurement')">
         <div class="log-form__fields">
             <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
             <label>Specific gravity <input type="number" step="0.001" name="specific_gravity"></label>
@@ -73,10 +82,10 @@
     </form>
 </details>
 
-<details class="card">
+<details class="card" id="log-racking">
     <summary>Log racking</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/racking" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'racking')">
         <div class="log-form__fields">
             <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
             <label>Volume (L) <input type="number" step="0.1" min="0" name="volume_l" required></label>
@@ -87,10 +96,10 @@
     </form>
 </details>
 
-<details class="card">
+<details class="card" id="log-bottling">
     <summary>Log bottling</summary>
     <form class="log-form" hx-post="/batches/{{ batch.id }}/events/bottling" hx-target="#batch-timeline" hx-swap="outerHTML"
-          hx-on::after-request="if(event.detail.successful) this.reset()">
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'bottling')">
         <div class="log-form__fields">
             <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
             <label>Bottle count <input type="number" min="1" name="bottle_count" required></label>
