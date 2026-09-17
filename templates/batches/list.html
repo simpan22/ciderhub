@@ -10,13 +10,15 @@
 <form class="card inline-form" method="post" action="/batches">
     <h2>New batch</h2>
     <label>Season
-        <select name="season_id" required>
+        <select name="season_id" required
+                hx-get="/batches/suggest-code" hx-trigger="change" hx-include="this"
+                hx-target="#code-input" hx-swap="outerHTML">
             {% for s in seasons %}
             <option value="{{ s.id }}">{{ s.year }}</option>
             {% endfor %}
         </select>
     </label>
-    <label>Code <input type="text" name="code" placeholder="2026-A" required></label>
+    <label>Code <input type="text" id="code-input" name="code" value="{{ suggested_code }}" placeholder="2026-A" required></label>
     <label>Name <input type="text" name="name" placeholder="optional, e.g. Bramley blend"></label>
     <button type="submit">Create</button>
 </form>

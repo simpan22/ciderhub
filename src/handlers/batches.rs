@@ -68,6 +68,13 @@ pub struct BatchDetail {
 struct ListTemplate {
     batches: Vec<BatchListItem>,
     seasons: Vec<Season>,
+    suggested_code: String,
+}
+
+#[derive(Template, WebTemplate)]
+#[template(path = "batches/_code_input.html")]
+struct CodeInputTemplate {
+    code: String,
 }
 
 #[derive(Template, WebTemplate)]
@@ -180,6 +187,42 @@ async fn fetch_seasons(db: &sqlx::SqlitePool) -> Result<Vec<Season>, sqlx::Error
     sqlx::query_as!(Season, r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
         .fetch_all(db)
         .await
+}
+
+/// `<year>-<next unused letter>` for that season, e.g. `2026-C` when
+/// `2026-A`/`2026-B` already exist. `None` once all 26 letters are
+/// used, or if the season doesn't exist — the field is left blank
+/// rather than guessing `2026-AA`, since 26 batches in one season is
+/// far beyond hobby scale.
+async fn suggest_next_code(db: &sqlx::SqlitePool, season_id: i64) -> Result<Option<String>, sqlx::Error> {
+    let Some(year) = sqlx::query_scalar!("SELECT year FROM seasons WHERE id = ?", season_id)
+        .fetch_optional(db)
+        .await?
+    else {
+        return Ok(None);
+    };
+
+    let codes = sqlx::query_scalar!("SELECT code FROM batches WHERE season_id = ?", season_id)
+        .fetch_all(db)
+        .await?;
+
+    let prefix = format!("{year}-");
+    let mut used = std::collections::HashSet::new();
+    for code in codes {
+        if let Some(letter) = code.strip_prefix(&prefix) {
+            let mut chars = letter.chars();
+            if let (Some(c), None) = (chars.next(), chars.next()) {
+                if c.is_ascii_uppercase() {
+                    used.insert(c);
+                }
+            }
+        }
+    }
+
+    Ok((b'A'..=b'Z')
+        .map(char::from)
+        .find(|c| !used.contains(c))
+        .map(|c| format!("{prefix}{c}")))
 }
 
 async fn fetch_trees(db: &sqlx::SqlitePool) -> Result<Vec<Tree>, sqlx::Error> {
@@ -603,7 +646,31 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
 
     let seasons = fetch_seasons(&state.db).await?;
 
-    Ok(ListTemplate { batches, seasons })
+    // Seasons are ordered `year DESC`, so the first one is the default
+    // selection in the New batch form's <select>.
+    let suggested_code = match seasons.first() {
+        Some(season) => suggest_next_code(&state.db, season.id).await?.unwrap_or_default(),
+        None => String::new(),
+    };
+
+    Ok(ListTemplate {
+        batches,
+        seasons,
+        suggested_code,
+    })
+}
+
+#[derive(serde::Deserialize)]
+pub struct SuggestCodeQuery {
+    season_id: i64,
+}
+
+pub async fn suggest_code(
+    State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<SuggestCodeQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let code = suggest_next_code(&state.db, query.season_id).await?.unwrap_or_default();
+    Ok(CodeInputTemplate { code })
 }
 
 pub async fn create(

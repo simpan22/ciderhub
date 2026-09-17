@@ -65,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
             "/batches",
             get(handlers::batches::list).post(handlers::batches::create),
         )
+        .route("/batches/suggest-code", get(handlers::batches::suggest_code))
         .route(
             "/batches/{id}",
             get(handlers::batches::detail)
