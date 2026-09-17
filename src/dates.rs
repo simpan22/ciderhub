@@ -54,6 +54,15 @@ pub fn month_options() -> Vec<MonthOption> {
     month_options_selected(today_month())
 }
 
+/// Whole days from `from` to `to` (both "YYYY-MM-DD"), e.g. for "how
+/// long has this been stored since bottling." `None` if either date
+/// fails to parse rather than panicking on stray/malformed data.
+pub fn days_between(from: &str, to: &str) -> Option<i64> {
+    let from = NaiveDate::parse_from_str(from, "%Y-%m-%d").ok()?;
+    let to = NaiveDate::parse_from_str(to, "%Y-%m-%d").ok()?;
+    Some((to - from).num_days())
+}
+
 /// Splits a stored "YYYY-MM-DD" date back into (month, day), discarding
 /// the year — used to prefill an edit form for event types (picking,
 /// juicing) where the year is always the batch's season year and never

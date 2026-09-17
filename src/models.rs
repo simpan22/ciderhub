@@ -73,14 +73,25 @@ pub struct TreeForm {
     pub notes: Option<String>,
 }
 
-// Built by hand in the handler (not `query_as!`), since `status` is
-// computed from the batch's events rather than fetched from a column.
+// Built by hand in the handler (not `query_as!`), since `status` (and
+// everything below it) is computed from the batch's events rather
+// than fetched from a column.
 pub struct BatchListItem {
     pub id: i64,
     pub code: String,
     pub name: Option<String>,
     pub status: &'static str,
     pub season_year: i64,
+    pub started_on: Option<String>,
+    pub bottled_on: Option<String>,
+    pub trees: Vec<String>,
+    pub additives: Vec<String>,
+    /// Potential ABV assuming full attenuation to ~1.000 SG, from the
+    /// batch's starting gravity alone — only trustworthy (and only
+    /// ever `Some`) when that reading was taken the same day as the
+    /// batch's first juicing event. See docs/specs/batch-list-columns.md.
+    pub abv_pct: Option<f64>,
+    pub days_since_bottling: Option<i64>,
 }
 
 #[derive(Deserialize)]

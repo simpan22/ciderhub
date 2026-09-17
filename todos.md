@@ -32,7 +32,7 @@ I want the dashboard to have a visualization where each batch of a season is rep
 # Feature: Add month lines in the timeline plot (Status: Done — docs/specs/timeline-month-lines.md)
 We need to be able to distinguish months in the timeline plot. This can be done by adding vertical lines for each month and labeling them with the forst three letters of the month. The lines should be in a light gray color and the labels should be in a darker gray color.
 
-# Feature: Batch list changes (Status: Spec ready for review — docs/specs/batch-list-columns.md)
+# Feature: Batch list changes (Status: Done — docs/specs/batch-list-columns.md)
 I want the Batch list to have the following items:
  - Batch id
  - Start date (first event date)

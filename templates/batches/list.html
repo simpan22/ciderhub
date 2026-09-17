@@ -23,6 +23,7 @@
     <button type="submit">Create</button>
 </form>
 
+<div class="table-scroll">
 <table class="card table">
     <thead>
         <tr>
@@ -30,6 +31,12 @@
             <th>Name</th>
             <th>Season</th>
             <th>Status</th>
+            <th>Started</th>
+            <th>Bottled</th>
+            <th>Trees</th>
+            <th>ABV</th>
+            <th>Aged</th>
+            <th>Additives</th>
         </tr>
     </thead>
     <tbody>
@@ -39,8 +46,15 @@
             <td>{{ b.name.as_deref().unwrap_or("—") }}</td>
             <td>{{ b.season_year }}</td>
             <td><span class="status status--{{ b.status }}">{{ b.status }}</span></td>
+            <td>{{ b.started_on.as_deref().unwrap_or("—") }}</td>
+            <td>{{ b.bottled_on.as_deref().unwrap_or("—") }}</td>
+            <td>{% if b.trees.is_empty() %}—{% else %}{{ b.trees|join(", ") }}{% endif %}</td>
+            <td>{% if let Some(abv) = b.abv_pct %}{{ abv|fmt("{:.1}") }}%{% else %}—{% endif %}</td>
+            <td>{% if let Some(days) = b.days_since_bottling %}{{ days }} days{% else %}—{% endif %}</td>
+            <td>{% if b.additives.is_empty() %}—{% else %}{{ b.additives|join(", ") }}{% endif %}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

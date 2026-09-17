@@ -617,29 +617,119 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
     .fetch_all(&state.db)
     .await?;
 
-    // One query for every batch's event types, grouped in memory, instead
-    // of one query per batch row.
-    let event_type_rows = sqlx::query!("SELECT batch_id, event_type FROM events")
-        .fetch_all(&state.db)
-        .await?;
-    let mut event_types_by_batch: HashMap<i64, Vec<String>> = HashMap::new();
-    for row in event_type_rows {
-        event_types_by_batch
-            .entry(row.batch_id)
-            .or_default()
-            .push(row.event_type);
+    // One query for every batch's events, grouped in memory, instead of
+    // one query per batch row. Ordered by occurred_at so the "first
+    // occurrence per batch wins" trick below gives the earliest date
+    // for each of start/first-juicing/bottling.
+    #[derive(Default)]
+    struct EventsAcc {
+        event_types: Vec<String>,
+        start: Option<String>,
+        first_juicing_at: Option<String>,
+        bottling_at: Option<String>,
     }
+
+    let event_rows = sqlx::query!(
+        "SELECT batch_id, event_type, occurred_at FROM events ORDER BY occurred_at"
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut events_by_batch: HashMap<i64, EventsAcc> = HashMap::new();
+    for row in event_rows {
+        let acc = events_by_batch.entry(row.batch_id).or_default();
+        acc.event_types.push(row.event_type.clone());
+        if acc.start.is_none() {
+            acc.start = Some(row.occurred_at.clone());
+        }
+        match row.event_type.as_str() {
+            "juicing" if acc.first_juicing_at.is_none() => acc.first_juicing_at = Some(row.occurred_at),
+            "bottling" if acc.bottling_at.is_none() => acc.bottling_at = Some(row.occurred_at),
+            _ => {}
+        }
+    }
+
+    // Trees used and additives applied — distinct names per batch, no
+    // amounts/weights/ratios, per the todo's "just a list" wording.
+    let tree_rows = sqlx::query!(
+        r#"
+        SELECT DISTINCT e.batch_id as "batch_id!", t.name
+        FROM juicing_tree_weights jtw
+        JOIN juicing_events je ON je.event_id = jtw.event_id
+        JOIN events e ON e.id = je.event_id
+        JOIN trees t ON t.id = jtw.tree_id
+        ORDER BY t.name
+        "#
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut trees_by_batch: HashMap<i64, Vec<String>> = HashMap::new();
+    for row in tree_rows {
+        trees_by_batch.entry(row.batch_id).or_default().push(row.name);
+    }
+
+    let additive_rows = sqlx::query!(
+        r#"
+        SELECT DISTINCT e.batch_id as "batch_id!", ae.substance
+        FROM additive_events ae
+        JOIN events e ON e.id = ae.event_id
+        ORDER BY ae.substance
+        "#
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut additives_by_batch: HashMap<i64, Vec<String>> = HashMap::new();
+    for row in additive_rows {
+        additives_by_batch.entry(row.batch_id).or_default().push(row.substance);
+    }
+
+    // Earliest specific-gravity reading per batch, for the potential-ABV
+    // estimate — only usable when it lines up with the batch's first
+    // juicing date (see BatchListItem::abv_pct's doc comment).
+    let gravity_rows = sqlx::query!(
+        r#"
+        SELECT e.batch_id as "batch_id!", e.occurred_at, me.specific_gravity as "sg!: f64"
+        FROM measurement_events me
+        JOIN events e ON e.id = me.event_id
+        WHERE me.specific_gravity IS NOT NULL
+        ORDER BY e.occurred_at
+        "#
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut first_gravity_by_batch: HashMap<i64, (String, f64)> = HashMap::new();
+    for row in gravity_rows {
+        first_gravity_by_batch.entry(row.batch_id).or_insert((row.occurred_at, row.sg));
+    }
+
+    let today = dates::today_iso();
 
     let batches = rows
         .into_iter()
         .map(|row| {
-            let types = event_types_by_batch.get(&row.id).map(Vec::as_slice).unwrap_or(&[]);
+            let acc = events_by_batch.get(&row.id);
+            let event_types = acc.map(|a| a.event_types.as_slice()).unwrap_or(&[]);
+            let started_on = acc.and_then(|a| a.start.clone());
+            let bottled_on = acc.and_then(|a| a.bottling_at.clone());
+
+            let abv_pct = acc.and_then(|a| a.first_juicing_at.as_deref()).and_then(|juicing_at| {
+                let (sg_date, sg) = first_gravity_by_batch.get(&row.id)?;
+                (sg_date == juicing_at).then(|| (sg - 1.0) * 131.25)
+            });
+
+            let days_since_bottling = bottled_on.as_deref().and_then(|b| dates::days_between(b, &today));
+
             BatchListItem {
-                status: compute_status(types.iter().map(String::as_str)),
+                status: compute_status(event_types.iter().map(String::as_str)),
                 id: row.id,
                 code: row.code,
                 name: row.name,
                 season_year: row.season_year,
+                started_on,
+                bottled_on,
+                trees: trees_by_batch.remove(&row.id).unwrap_or_default(),
+                additives: additives_by_batch.remove(&row.id).unwrap_or_default(),
+                abv_pct,
+                days_since_bottling,
             }
         })
         .collect();
