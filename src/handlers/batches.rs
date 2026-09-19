@@ -53,7 +53,6 @@ fn compute_status<'a>(event_types: impl IntoIterator<Item = &'a str>) -> &'stati
 pub struct BatchDetail {
     pub id: i64,
     pub code: String,
-    pub name: Option<String>,
     pub status: &'static str,
     pub season_year: i64,
     pub notes: Option<String>,
@@ -280,7 +279,7 @@ async fn fetch_season_year(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Optio
 async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplate>, sqlx::Error> {
     let row = sqlx::query!(
         r#"
-        SELECT b.id as "id!", b.code, b.name, b.notes, s.year as season_year
+        SELECT b.id as "id!", b.code, b.notes, s.year as season_year
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
         WHERE b.id = ?
@@ -306,7 +305,6 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
     let batch = BatchDetail {
         id: row.id,
         code: row.code,
-        name: row.name,
         status: compute_status(event_types.iter().map(String::as_str)),
         season_year: row.season_year,
         notes: row.notes,
@@ -611,7 +609,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
 pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let rows = sqlx::query!(
         r#"
-        SELECT b.id as "id!", b.code, b.name, s.year as season_year
+        SELECT b.id as "id!", b.code, s.year as season_year
         FROM batches b
         JOIN seasons s ON s.id = b.season_id
         ORDER BY b.code ASC
@@ -720,6 +718,23 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
         *bottle_count_by_batch.entry(row.batch_id).or_insert(0) += row.bottle_count;
     }
 
+    // Most recent tasting score per batch — ordered newest-first so the
+    // first row seen per batch (via `or_insert`) is the latest one.
+    let taste_score_rows = sqlx::query!(
+        r#"
+        SELECT e.batch_id as "batch_id!", te.score
+        FROM tasting_events te
+        JOIN events e ON e.id = te.event_id
+        ORDER BY e.occurred_at DESC
+        "#
+    )
+    .fetch_all(&state.db)
+    .await?;
+    let mut latest_taste_score_by_batch: HashMap<i64, i64> = HashMap::new();
+    for row in taste_score_rows {
+        latest_taste_score_by_batch.entry(row.batch_id).or_insert(row.score);
+    }
+
     let today = dates::today_iso();
 
     let batches = rows
@@ -741,12 +756,12 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
                 status: compute_status(event_types.iter().map(String::as_str)),
                 id: row.id,
                 code: row.code,
-                name: row.name,
                 season_year: row.season_year,
                 started_on,
                 bottled_on,
                 trees: trees_by_batch.remove(&row.id).unwrap_or_default(),
                 additives: additives_by_batch.remove(&row.id).unwrap_or_default(),
+                latest_taste_score: latest_taste_score_by_batch.get(&row.id).copied(),
                 abv_pct,
                 days_since_bottling,
                 bottle_count: bottle_count_by_batch.get(&row.id).copied(),
@@ -840,8 +855,7 @@ pub async fn update(
     Form(form): Form<UpdateBatchForm>,
 ) -> Result<Response, AppError> {
     sqlx::query!(
-        "UPDATE batches SET name = ?, notes = ? WHERE id = ?",
-        form.name,
+        "UPDATE batches SET notes = ? WHERE id = ?",
         form.notes,
         id
     )

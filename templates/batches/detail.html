@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="page-header" data-season-year="{{ batch.season_year }}">
-    <h1>{{ batch.code }}{% if let Some(name) = batch.name %} — {{ name }}{% endif %}</h1>
+    <h1>{{ batch.code }}</h1>
 </section>
 
 {% include "batches/_meta.html" %}

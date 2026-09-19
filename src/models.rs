@@ -79,13 +79,15 @@ pub struct TreeForm {
 pub struct BatchListItem {
     pub id: i64,
     pub code: String,
-    pub name: Option<String>,
     pub status: &'static str,
     pub season_year: i64,
     pub started_on: Option<String>,
     pub bottled_on: Option<String>,
     pub trees: Vec<String>,
     pub additives: Vec<String>,
+    /// Score (0-10) from the batch's most recent tasting event, if it
+    /// has any.
+    pub latest_taste_score: Option<i64>,
     /// Potential ABV assuming full attenuation to ~1.000 SG, from the
     /// batch's starting gravity alone — only trustworthy (and only
     /// ever `Some`) when that reading was taken the same day as the
@@ -109,8 +111,6 @@ pub struct NewBatchForm {
 
 #[derive(Deserialize)]
 pub struct UpdateBatchForm {
-    #[serde(deserialize_with = "empty_string_as_none", default)]
-    pub name: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
 }

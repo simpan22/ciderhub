@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT b.id as \"id!\", b.code, b.name, s.year as season_year\n        FROM batches b\n        JOIN seasons s ON s.id = b.season_id\n        ORDER BY b.code ASC\n        ",
+  "query": "\n        SELECT b.id as \"id!\", b.code, b.notes, s.year as season_year\n        FROM batches b\n        JOIN seasons s ON s.id = b.season_id\n        WHERE b.id = ?\n        ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "name",
+        "name": "notes",
         "ordinal": 2,
         "type_info": "Text"
       },
@@ -25,14 +25,14 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
-      true,
+      false,
       false,
       true,
       false
     ]
   },
-  "hash": "0ba509220987004f8efff2fa2d15471f2c2758931a9d8c1d683bd3a900e5ad61"
+  "hash": "c6accfa1d4ec5d3bbe3908bf09b4c623287dcf89c5f2b51882f446da494aeee9"
 }

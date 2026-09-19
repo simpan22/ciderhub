@@ -5,7 +5,6 @@
         · {% if let Some(started) = batch.started_on %}Started {{ started }}{% else %}Not started yet{% endif %}
     </p>
     <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
-        <label>Name <input type="text" name="name" value="{{ batch.name.as_deref().unwrap_or("") }}" placeholder="optional"></label>
         <label>Notes <input type="text" name="notes" value="{{ batch.notes.as_deref().unwrap_or("") }}"></label>
         <button type="submit">Save</button>
     </form>

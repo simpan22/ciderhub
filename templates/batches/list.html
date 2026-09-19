@@ -19,7 +19,6 @@
         </select>
     </label>
     <label>Code <input type="text" id="code-input" name="code" value="{{ suggested_code }}" placeholder="2026-A" required></label>
-    <label>Name <input type="text" name="name" placeholder="optional, e.g. Bramley blend"></label>
     <button type="submit">Create</button>
 </form>
 
@@ -28,7 +27,7 @@
     <thead>
         <tr>
             <th>Code</th>
-            <th>Name</th>
+            <th>Taste score</th>
             <th>Season</th>
             <th>Status</th>
             <th>Started</th>
@@ -44,7 +43,7 @@
         {% for b in batches %}
         <tr>
             <td><a href="/batches/{{ b.id }}">{{ b.code }}</a></td>
-            <td>{{ b.name.as_deref().unwrap_or("—") }}</td>
+            <td>{% if let Some(score) = b.latest_taste_score %}{{ score }}/10{% else %}—{% endif %}</td>
             <td>{{ b.season_year }}</td>
             <td><span class="status status--{{ b.status }}">{{ b.status }}</span></td>
             <td>{{ b.started_on.as_deref().unwrap_or("—") }}</td>

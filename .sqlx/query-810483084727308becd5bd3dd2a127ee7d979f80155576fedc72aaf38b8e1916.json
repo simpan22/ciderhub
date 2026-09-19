@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.batch_id as \"batch_id!\", te.score\n        FROM tasting_events te\n        JOIN events e ON e.id = te.event_id\n        ORDER BY e.occurred_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "score",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "810483084727308becd5bd3dd2a127ee7d979f80155576fedc72aaf38b8e1916"
+}
