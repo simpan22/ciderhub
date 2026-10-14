@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id as \"id!\", name FROM tasters WHERE token = ? AND revoked_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "cee354cadcdab6a44f7f82da9740e76259a83c0799f38443273d272ec36b497d"
+}

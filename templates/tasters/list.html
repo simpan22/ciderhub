@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}CiderHub — Tasters{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Tasters</h1>
+    <p class="muted">Friends who log taste comparisons on the simple tasting page. Send each one their personal link: opening it signs them in on that phone, and it opens only the tasting page. Their comparisons count towards the same rating as yours.</p>
+</section>
+
+<form class="card inline-form" hx-post="/tasters" hx-target="#tasters-table-body" hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful) this.reset()">
+    <h2>Add taster</h2>
+    <label>Name <input type="text" name="name" placeholder="e.g. Anna" required></label>
+    <button type="submit">Add</button>
+</form>
+
+<div class="table-scroll">
+<table class="card table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Invite link</th>
+            <th>Comparisons</th>
+            <th>Last active</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="tasters-table-body">
+        {% include "tasters/_table_body.html" %}
+    </tbody>
+</table>
+</div>
+
+<script>
+    // Links are rendered as paths; prefix this site's origin so the
+    // copied link works wherever the app is hosted.
+    function ciderhubFillTasterLinks() {
+        document.querySelectorAll("[data-link-path]").forEach(function (input) {
+            input.value = window.location.origin + input.dataset.linkPath;
+        });
+    }
+    function ciderhubCopyLink(button) {
+        const input = button.parentElement.querySelector("input");
+        navigator.clipboard.writeText(input.value).then(function () {
+            button.textContent = "Copied";
+            setTimeout(function () { button.textContent = "Copy"; }, 1500);
+        });
+    }
+    document.addEventListener("DOMContentLoaded", ciderhubFillTasterLinks);
+    document.body.addEventListener("htmx:afterSwap", ciderhubFillTasterLinks);
+</script>
+{% endblock %}

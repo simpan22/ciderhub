@@ -1,0 +1,30 @@
+{% for row in rows %}
+<tr>
+    <td>{{ row.name }}{% if row.revoked %} <span class="muted">(revoked)</span>{% endif %}</td>
+    <td>
+        {% if row.revoked %}
+        <span class="muted">—</span>
+        {% else %}
+        <span class="taster-link">
+            <input type="text" readonly data-link-path="{{ row.link_path }}" value="{{ row.link_path }}" onfocus="this.select()">
+            <button type="button" onclick="ciderhubCopyLink(this)">Copy</button>
+        </span>
+        {% endif %}
+    </td>
+    <td>{{ row.comparisons }}</td>
+    <td>{{ row.last_active.as_deref().unwrap_or("—") }}</td>
+    <td class="actions">
+        {% if row.revoked %}
+        <button hx-post="/tasters/{{ row.id }}/new-link" hx-target="#tasters-table-body" hx-swap="innerHTML"
+                hx-confirm="Let {{ row.name }} back in with a new link?">Reinstate</button>
+        {% else %}
+        <button type="button" hx-post="/tasters/{{ row.id }}/new-link" hx-target="#tasters-table-body" hx-swap="innerHTML"
+                hx-confirm="Replace {{ row.name }}'s link? The old link will stop working.">New link</button>
+        <button class="danger" hx-post="/tasters/{{ row.id }}/revoke" hx-target="#tasters-table-body" hx-swap="innerHTML"
+                hx-confirm="Revoke {{ row.name }}'s access? Their comparisons are kept.">Revoke</button>
+        {% endif %}
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="5" class="muted">No tasters yet.</td></tr>
+{% endfor %}

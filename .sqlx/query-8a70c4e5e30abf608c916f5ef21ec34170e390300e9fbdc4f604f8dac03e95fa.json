@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO tasters (name, token) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "8a70c4e5e30abf608c916f5ef21ec34170e390300e9fbdc4f604f8dac03e95fa"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT e.id as \"event_id!\", e.occurred_at, e.notes, e.batch_id, b.code as batch_code,\n               ce.other_batch_id, ob.code as other_code, ce.outcome\n        FROM comparison_events ce\n        JOIN events e ON e.id = ce.event_id\n        JOIN batches b ON b.id = e.batch_id\n        JOIN batches ob ON ob.id = ce.other_batch_id\n        WHERE e.batch_id = ? OR ce.other_batch_id = ?\n        ",
+  "query": "\n        SELECT e.id as \"event_id!\", e.occurred_at, e.notes, e.batch_id, b.code as batch_code,\n               ce.other_batch_id, ob.code as other_code, ce.outcome, t.name as \"taster_name?\"\n        FROM comparison_events ce\n        JOIN events e ON e.id = ce.event_id\n        JOIN batches b ON b.id = e.batch_id\n        JOIN batches ob ON ob.id = ce.other_batch_id\n        LEFT JOIN tasters t ON t.id = ce.taster_id\n        WHERE e.batch_id = ? OR ce.other_batch_id = ?\n        ",
   "describe": {
     "columns": [
       {
@@ -42,6 +42,11 @@
         "name": "outcome",
         "ordinal": 7,
         "type_info": "Text"
+      },
+      {
+        "name": "taster_name?",
+        "ordinal": 8,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -55,8 +60,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "7b6b33ef13be1095fe78beeca939187a65bada220096b5e0deeef355e3f5c98d"
+  "hash": "8b37c005cab4348e0768c406e9c167903957b6df6a62bdcbce0f7d8a000edd85"
 }

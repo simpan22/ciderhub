@@ -1,0 +1,56 @@
+{% extends "taste/base.html" %}
+
+{% block greeting %}{% if let Some(name) = name %}<span class="taste__greeting">Hi {{ name }}</span>{% endif %}{% endblock %}
+
+{% block content %}
+{% if choices.len() < 2 %}
+<section class="card">
+    <h1>Nothing to compare yet</h1>
+    <p class="muted">There need to be at least two bottled ciders. Check back later.</p>
+</section>
+{% else %}
+<form class="card taste-form" hx-post="/taste/comparisons" hx-target="#taste-results" hx-swap="outerHTML"
+      hx-on::after-request="if(event.detail.successful && event.detail.xhr.responseText.includes('taste-flash--ok')) this.querySelector('[name=notes]').value = ''">
+    <fieldset class="taste-chips" data-pair="second_batch_id">
+        <legend>First cider</legend>
+        {% for b in choices %}
+        <input type="radio" class="taste-chip__input" id="first-{{ b.id }}" name="first_batch_id" value="{{ b.id }}" required>
+        <label class="taste-chip" for="first-{{ b.id }}">{{ b.code }}</label>
+        {% endfor %}
+    </fieldset>
+
+    <fieldset class="taste-chips" data-pair="first_batch_id">
+        <legend>Second cider</legend>
+        {% for b in choices %}
+        <input type="radio" class="taste-chip__input" id="second-{{ b.id }}" name="second_batch_id" value="{{ b.id }}" required>
+        <label class="taste-chip" for="second-{{ b.id }}">{{ b.code }}</label>
+        {% endfor %}
+    </fieldset>
+
+    <label class="taste-note">Note (optional) <input type="text" name="notes" autocomplete="off"></label>
+
+    <fieldset class="taste-outcome">
+        <legend>Which did you prefer?</legend>
+        <button type="submit" name="outcome" value="win">First</button>
+        <button type="submit" name="outcome" value="tie">Same</button>
+        <button type="submit" name="outcome" value="loss">Second</button>
+    </fieldset>
+</form>
+{% endif %}
+
+{% include "taste/_results.html" %}
+
+<script>
+    // Picking a cider in one row disables it in the other, so the same
+    // cider can't be chosen twice (the server rejects it too).
+    document.querySelectorAll(".taste-chips").forEach(function (group) {
+        group.addEventListener("change", function (e) {
+            const other = document.querySelectorAll('[name="' + group.dataset.pair + '"]');
+            other.forEach(function (input) {
+                input.disabled = input.value === e.target.value;
+                if (input.disabled) input.checked = false;
+            });
+        });
+    });
+</script>
+{% endblock %}

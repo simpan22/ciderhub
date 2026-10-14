@@ -169,11 +169,12 @@ async fn fetch_rating_series(db: &sqlx::SqlitePool) -> Result<HashMap<i64, Vec<M
     let rows = sqlx::query!(
         r#"
         SELECT e.occurred_at, e.batch_id, b.code as batch_code,
-               ce.other_batch_id, ob.code as other_code, ce.outcome
+               ce.other_batch_id, ob.code as other_code, ce.outcome, t.name as "taster_name?"
         FROM comparison_events ce
         JOIN events e ON e.id = ce.event_id
         JOIN batches b ON b.id = e.batch_id
         JOIN batches ob ON ob.id = ce.other_batch_id
+        LEFT JOIN tasters t ON t.id = ce.taster_id
         ORDER BY e.occurred_at, e.id
         "#
     )
@@ -198,7 +199,10 @@ async fn fetch_rating_series(db: &sqlx::SqlitePool) -> Result<HashMap<i64, Vec<M
             descriptions
                 .entry((id, row.occurred_at.clone()))
                 .or_default()
-                .push(format!("{verb} {opponent}"));
+                .push(match &row.taster_name {
+                    Some(name) => format!("{verb} {opponent} (by {name})"),
+                    None => format!("{verb} {opponent}"),
+                });
         }
         comparisons.push(DatedComparison {
             occurred_at: row.occurred_at,

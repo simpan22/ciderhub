@@ -10,6 +10,7 @@ askama_web = { version = "0.16.0", features = ["axum-0.8"] }
 axum = "0.8.9"
 chrono = "0.4.45"
 dotenvy = "0.15.7"
+getrandom = "0.2.17"
 serde = { version = "1.0.229", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "macros", "chrono"] }
 tokio = { version = "1.53.1", features = ["full"] }

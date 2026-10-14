@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT t.id as \"id!\", t.name as \"name!\", t.token as \"token!\", t.revoked_at,\n               COUNT(ce.event_id) as \"comparisons!: i64\",\n               MAX(e.occurred_at) as \"last_active?: String\"\n        FROM tasters t\n        LEFT JOIN comparison_events ce ON ce.taster_id = t.id\n        LEFT JOIN events e ON e.id = ce.event_id\n        GROUP BY t.id\n        ORDER BY t.revoked_at IS NOT NULL, t.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "token!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "revoked_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "comparisons!: i64",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_active?: String",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "0016088bcce10e85b8c927ebcab5da1e5f6bd3c2b37e3c71737cf7a89782f53e"
+}

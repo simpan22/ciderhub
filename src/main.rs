@@ -166,6 +166,21 @@ async fn main() -> anyhow::Result<()> {
             "/batches/{batch_id}/events/comparison/{event_id}",
             axum::routing::put(handlers::batches::update_comparison),
         )
+        .route(
+            "/tasters",
+            get(handlers::tasters::list).post(handlers::tasters::create),
+        )
+        .route("/tasters/{id}/revoke", axum::routing::post(handlers::tasters::revoke))
+        .route("/tasters/{id}/new-link", axum::routing::post(handlers::tasters::new_link))
+        // Friends' tasting page — the only routes a taster's invite-link
+        // cookie opens (see handlers::auth::require_auth).
+        .route("/taste", get(handlers::taste::page))
+        .route("/taste/join/{token}", get(handlers::taste::join))
+        .route("/taste/comparisons", axum::routing::post(handlers::taste::compare))
+        .route(
+            "/taste/comparisons/{event_id}",
+            axum::routing::delete(handlers::taste::undo),
+        )
         .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))
         .layer(axum::middleware::from_fn_with_state(state.clone(), handlers::auth::require_auth))

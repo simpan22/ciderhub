@@ -1,0 +1,18 @@
+<div id="taste-results">
+    {% if let Some(flash) = flash %}
+    <p class="taste-flash {% if flash.ok %}taste-flash--ok{% else %}taste-flash--error{% endif %}" role="status">{{ flash.message }}</p>
+    {% endif %}
+    {% if !today_rows.is_empty() %}
+    <section class="card">
+        <h2>Your comparisons today</h2>
+        <ul class="taste-today">
+            {% for row in today_rows %}
+            <li>
+                <span>{{ row.summary }}</span>
+                <button type="button" hx-delete="/taste/comparisons/{{ row.event_id }}" hx-target="#taste-results" hx-swap="outerHTML">Undo</button>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</div>

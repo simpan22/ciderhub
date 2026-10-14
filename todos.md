@@ -65,3 +65,6 @@ It is hard to rank taste using an absolute scale. Sometimes i try two different 
 
 # Feature: Plot the comparative rating on the Overview page (Status: Done — docs/specs/plot-comparative-rating.md)
 The rating should be plottable on the overview page.
+
+# Feature: Tasting page for friends (Status: Done — docs/specs/friend-tasting-page.md)
+A separate page, accessible to other users via login, for logging taste comparisons without the complicated UI of the main app, so friends can log too.

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        DELETE FROM events\n        WHERE id = ? AND event_type = 'comparison' AND occurred_at = ?\n          AND id IN (SELECT event_id FROM comparison_events WHERE taster_id IS ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "76bebb3bd27b43d603819b68721e26109b402986c67893df36f0b3344a5ff36b"
+}

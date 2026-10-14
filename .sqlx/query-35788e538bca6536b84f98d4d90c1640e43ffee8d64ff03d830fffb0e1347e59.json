@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE tasters SET token = ?, revoked_at = NULL WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "35788e538bca6536b84f98d4d90c1640e43ffee8d64ff03d830fffb0e1347e59"
+}

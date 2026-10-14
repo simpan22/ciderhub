@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>{% block title %}CiderHub tasting{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js" defer></script>
+</head>
+<body class="taste">
+    <header class="site-header">
+        <div class="site-header__inner">
+            <span class="site-header__brand">CiderHub tasting</span>
+            {% block greeting %}{% endblock %}
+        </div>
+    </header>
+    <main class="content taste__content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

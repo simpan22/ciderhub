@@ -448,3 +448,136 @@ button.danger {
     height: 0.7rem;
     border-radius: 2px;
 }
+
+/* Friends' tasting page (/taste) — phone-first, big touch targets. */
+
+.taste__content {
+    max-width: 560px;
+    padding: 1rem;
+}
+
+.taste__greeting {
+    color: #d9dfe6;
+}
+
+.taste-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.taste-form fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.taste-form legend {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.taste-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.taste-chip__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.taste-chip {
+    display: inline-block;
+    min-width: 5.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--color-text);
+    font-size: 1rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.taste-chip__input:checked + .taste-chip {
+    border-color: var(--color-brand);
+    background: var(--color-brand);
+    color: #fff;
+}
+
+.taste-chip__input:focus-visible + .taste-chip {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.taste-chip__input:disabled + .taste-chip {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.taste-note input {
+    font-size: 1rem;
+    padding: 0.6rem;
+}
+
+.taste-outcome {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.taste-outcome legend {
+    grid-column: 1 / -1;
+}
+
+.taste-outcome button {
+    padding: 1rem 0.5rem;
+    font-size: 1.05rem;
+}
+
+.taste-flash {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+}
+
+.taste-flash--ok {
+    background: #e7efe3;
+    color: #3d5a33;
+}
+
+.taste-flash--error {
+    background: #f6e3e3;
+    color: #a33;
+}
+
+.taste-today {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.taste-today li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.taste-today li:last-child {
+    border-bottom: 0;
+}
+
+.taster-link {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.taster-link input {
+    width: 16rem;
+    font-size: 0.8rem;
+}

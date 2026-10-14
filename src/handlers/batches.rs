@@ -303,7 +303,7 @@ async fn fetch_comparative_ratings(db: &sqlx::SqlitePool) -> Result<HashMap<i64,
 
 /// Batches whose computed status is `bottled` — the only ones that can
 /// be compared (same gate as the tasting card).
-async fn fetch_bottled_batches(db: &sqlx::SqlitePool) -> Result<Vec<BatchChoice>, sqlx::Error> {
+pub(crate) async fn fetch_bottled_batches(db: &sqlx::SqlitePool) -> Result<Vec<BatchChoice>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"
         SELECT b.id as "id!", b.code, e.event_type as "event_type?"
@@ -515,11 +515,12 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
     let comparisons = sqlx::query!(
         r#"
         SELECT e.id as "event_id!", e.occurred_at, e.notes, e.batch_id, b.code as batch_code,
-               ce.other_batch_id, ob.code as other_code, ce.outcome
+               ce.other_batch_id, ob.code as other_code, ce.outcome, t.name as "taster_name?"
         FROM comparison_events ce
         JOIN events e ON e.id = ce.event_id
         JOIN batches b ON b.id = e.batch_id
         JOIN batches ob ON ob.id = ce.other_batch_id
+        LEFT JOIN tasters t ON t.id = ce.taster_id
         WHERE e.batch_id = ? OR ce.other_batch_id = ?
         "#,
         batch_id,
@@ -725,10 +726,13 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             Outcome::Loss => "Worse than ",
             Outcome::Tie => "Tied with ",
         };
-        let tail = match c.notes.filter(|n| !n.is_empty()) {
+        let mut tail = match c.notes.filter(|n| !n.is_empty()) {
             Some(notes) => format!(" — {notes}"),
             None => String::new(),
         };
+        if let Some(name) = c.taster_name {
+            tail.push_str(&format!(" (by {name})"));
+        }
         timeline.push(TimelineRow {
             event_id: c.event_id,
             occurred_at: c.occurred_at,
@@ -1834,48 +1838,50 @@ pub async fn update_tasting(
 
 // ---- comparison ----
 
-/// Shared checks for adding/editing a comparison: a known outcome, and
-/// an existing batch on the other side that isn't this one.
-async fn validate_comparison(
+/// Shared checks for adding/editing a comparison, here and on the
+/// friends' /taste page: a known outcome, and an existing batch on the
+/// other side that isn't this one. `Err` is the message to show.
+pub(crate) async fn validate_comparison(
     db: &sqlx::SqlitePool,
     batch_id: i64,
-    form: &AddComparisonForm,
-) -> Result<Result<Outcome, Response>, sqlx::Error> {
-    let Some(outcome) = Outcome::parse(&form.outcome) else {
-        return Ok(Err((StatusCode::UNPROCESSABLE_ENTITY, "unknown outcome").into_response()));
+    other_batch_id: i64,
+    outcome: &str,
+) -> Result<Result<Outcome, &'static str>, sqlx::Error> {
+    let Some(outcome) = Outcome::parse(outcome) else {
+        return Ok(Err("unknown outcome"));
     };
-    if form.other_batch_id == batch_id {
-        return Ok(Err(
-            (StatusCode::UNPROCESSABLE_ENTITY, "a batch can't be compared with itself").into_response(),
-        ));
+    if other_batch_id == batch_id {
+        return Ok(Err("a batch can't be compared with itself"));
     }
-    let exists = sqlx::query_scalar!("SELECT id FROM batches WHERE id = ?", form.other_batch_id)
+    let exists = sqlx::query_scalar!("SELECT id FROM batches WHERE id = ?", other_batch_id)
         .fetch_optional(db)
         .await?
         .is_some();
     if !exists {
-        return Ok(Err((StatusCode::UNPROCESSABLE_ENTITY, "other batch not found").into_response()));
+        return Ok(Err("other batch not found"));
     }
     Ok(Ok(outcome))
 }
 
-pub async fn add_comparison(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Form(form): Form<AddComparisonForm>,
-) -> Result<Response, AppError> {
-    let outcome = match validate_comparison(&state.db, id, &form).await? {
-        Ok(outcome) => outcome,
-        Err(response) => return Ok(response),
-    };
-
-    let mut tx = state.db.begin().await?;
+/// Inserts a comparison (spine row on `batch_id`, `outcome` from its
+/// point of view), shared by the main app and the /taste page.
+/// `taster_id` is `None` for the owner.
+pub(crate) async fn insert_comparison(
+    db: &sqlx::SqlitePool,
+    batch_id: i64,
+    other_batch_id: i64,
+    outcome: Outcome,
+    occurred_at: &str,
+    notes: Option<&str>,
+    taster_id: Option<i64>,
+) -> Result<i64, sqlx::Error> {
+    let mut tx = db.begin().await?;
 
     let event = sqlx::query!(
         "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'comparison', ?, ?)",
-        id,
-        form.occurred_at,
-        form.notes
+        batch_id,
+        occurred_at,
+        notes
     )
     .execute(&mut *tx)
     .await?;
@@ -1884,15 +1890,39 @@ pub async fn add_comparison(
     let outcome = outcome.as_str();
 
     sqlx::query!(
-        "INSERT INTO comparison_events (event_id, other_batch_id, outcome) VALUES (?, ?, ?)",
+        "INSERT INTO comparison_events (event_id, other_batch_id, outcome, taster_id) VALUES (?, ?, ?, ?)",
         event_id,
-        form.other_batch_id,
-        outcome
+        other_batch_id,
+        outcome,
+        taster_id
     )
     .execute(&mut *tx)
     .await?;
 
     tx.commit().await?;
+    Ok(event_id)
+}
+
+pub async fn add_comparison(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddComparisonForm>,
+) -> Result<Response, AppError> {
+    let outcome = match validate_comparison(&state.db, id, form.other_batch_id, &form.outcome).await? {
+        Ok(outcome) => outcome,
+        Err(message) => return Ok((StatusCode::UNPROCESSABLE_ENTITY, message).into_response()),
+    };
+
+    insert_comparison(
+        &state.db,
+        id,
+        form.other_batch_id,
+        outcome,
+        &form.occurred_at,
+        form.notes.as_deref(),
+        None,
+    )
+    .await?;
 
     // The rating shown in the meta card changes too, so refresh it out
     // of band alongside the timeline.
@@ -1964,9 +1994,9 @@ pub async fn update_comparison(
     Path((batch_id, event_id)): Path<(i64, i64)>,
     Form(form): Form<AddComparisonForm>,
 ) -> Result<Response, AppError> {
-    let outcome = match validate_comparison(&state.db, batch_id, &form).await? {
+    let outcome = match validate_comparison(&state.db, batch_id, form.other_batch_id, &form.outcome).await? {
         Ok(outcome) => outcome,
-        Err(response) => return Ok(response),
+        Err(message) => return Ok((StatusCode::UNPROCESSABLE_ENTITY, message).into_response()),
     };
 
     let mut tx = state.db.begin().await?;
