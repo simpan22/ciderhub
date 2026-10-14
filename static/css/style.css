@@ -253,15 +253,24 @@ button.danger {
     letter-spacing: 0.03em;
 }
 
+/* Stays a real table cell (not flex), so its border and vertical
+   centring line up with the rest of the row. */
 .table td.actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.table td.actions > * + * {
+    margin-left: 0.25rem; /* plus the inline whitespace between buttons */
 }
 
 .table td.actions button {
     padding: 0.2rem 0.55rem;
     font-size: 0.82rem;
+    /* `button.danger`'s top margin is for standalone buttons (e.g.
+       Delete batch); in a row of actions it pushes Delete/Revoke
+       below the buttons next to it. */
+    margin-top: 0;
 }
 
 .status {
