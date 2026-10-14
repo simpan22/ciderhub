@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE comparison_events SET other_batch_id = ?, outcome = ? WHERE event_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "71ab2c2347e6a96eae8437ac0f56f203e9815b82a83add9d1b58d27f29d77ebb"
+}

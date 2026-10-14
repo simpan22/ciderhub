@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO comparison_events (event_id, other_batch_id, outcome) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "7156b42b981661a4cb09738594d0cc005ffefcbd3c791fddf89afcb1358f5d0d"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.batch_id, ce.other_batch_id, ce.outcome\n        FROM comparison_events ce\n        JOIN events e ON e.id = ce.event_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "batch_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "other_batch_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "outcome",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ecaf2667ed8df3949842e9de4749f9b2dc3c87c0eeb08f7705ac3b37cb37280d"
+}

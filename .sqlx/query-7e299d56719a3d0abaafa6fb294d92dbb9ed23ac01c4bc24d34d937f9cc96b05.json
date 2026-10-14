@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE events SET batch_id = ?, occurred_at = ?, notes = ?\n        WHERE id = ?\n          AND id IN (SELECT event_id FROM comparison_events)\n          AND (batch_id = ? OR id IN (SELECT event_id FROM comparison_events WHERE other_batch_id = ?))\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "7e299d56719a3d0abaafa6fb294d92dbb9ed23ac01c4bc24d34d937f9cc96b05"
+}

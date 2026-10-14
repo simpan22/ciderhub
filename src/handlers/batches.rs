@@ -10,10 +10,12 @@ use axum::Form;
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{
-    AddAdditiveForm, AddBottlingForm, AddFailureForm, AddMeasurementForm, AddRackingForm,
-    AddTastingForm, BatchListItem, MonthOption, NewBatchForm, Season, TimelineRow, Tree,
-    TreePercentageField, TreeYield, Unit, UnitOption, UpdateBatchForm,
+    AddAdditiveForm, AddBottlingForm, AddComparisonForm, AddFailureForm, AddMeasurementForm,
+    AddRackingForm, AddTastingForm, BatchChoice, BatchListItem, MonthOption, NewBatchForm,
+    RatingSummary, Season, TimelineLink, TimelineRow, Tree, TreePercentageField, TreeYield, Unit,
+    UnitOption, UpdateBatchForm,
 };
+use crate::ranking::{self, Outcome};
 use crate::state::AppState;
 
 /// Status is derived from which event types a batch has logged, most
@@ -60,6 +62,9 @@ pub struct BatchDetail {
     /// any. Computing this instead of asking for it at creation means
     /// it can never disagree with what actually happened.
     pub started_on: Option<String>,
+    /// Bradley-Terry rating from pairwise comparisons, if the batch
+    /// has been compared at all.
+    pub rating: Option<RatingSummary>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -107,6 +112,8 @@ struct DetailTemplate {
     months: Vec<MonthOption>,
     today_day: u32,
     today: String,
+    /// Other bottled batches, for the "Log comparison" card's dropdown.
+    comparison_choices: Vec<BatchChoice>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -182,6 +189,19 @@ struct EditTastingTemplate {
     notes: Option<String>,
 }
 
+#[derive(Template, WebTemplate)]
+#[template(path = "batches/_edit_comparison.html")]
+struct EditComparisonTemplate {
+    batch_id: i64,
+    event_id: i64,
+    occurred_at: String,
+    other_batch_id: i64,
+    /// From `batch_id`'s point of view: "win" / "loss" / "tie".
+    outcome: &'static str,
+    notes: Option<String>,
+    choices: Vec<BatchChoice>,
+}
+
 async fn fetch_seasons(db: &sqlx::SqlitePool) -> Result<Vec<Season>, sqlx::Error> {
     sqlx::query_as!(Season, r#"SELECT id as "id!", year FROM seasons ORDER BY year DESC"#)
         .fetch_all(db)
@@ -254,6 +274,65 @@ fn build_tree_fields(all_trees: &[Tree], selected: &HashMap<i64, f64>) -> Vec<Tr
         .collect()
 }
 
+/// Every logged comparison, fitted into a rating per batch. Computed on
+/// each request rather than stored — see src/ranking.rs.
+async fn fetch_comparative_ratings(db: &sqlx::SqlitePool) -> Result<HashMap<i64, ranking::Rating>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT e.batch_id, ce.other_batch_id, ce.outcome
+        FROM comparison_events ce
+        JOIN events e ON e.id = ce.event_id
+        "#
+    )
+    .fetch_all(db)
+    .await?;
+
+    let comparisons: Vec<ranking::Comparison> = rows
+        .into_iter()
+        .filter_map(|r| {
+            Some(ranking::Comparison {
+                a: r.batch_id,
+                b: r.other_batch_id,
+                outcome: Outcome::parse(&r.outcome)?,
+            })
+        })
+        .collect();
+
+    Ok(ranking::fit(&comparisons))
+}
+
+/// Batches whose computed status is `bottled` — the only ones that can
+/// be compared (same gate as the tasting card).
+async fn fetch_bottled_batches(db: &sqlx::SqlitePool) -> Result<Vec<BatchChoice>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT b.id as "id!", b.code, e.event_type as "event_type?"
+        FROM batches b
+        LEFT JOIN events e ON e.batch_id = b.id
+        ORDER BY b.code
+        "#
+    )
+    .fetch_all(db)
+    .await?;
+
+    // Rows arrive grouped by batch (ordered by code, which is unique).
+    let mut batches: Vec<(BatchChoice, Vec<String>)> = Vec::new();
+    for row in rows {
+        if batches.last().is_none_or(|(b, _)| b.id != row.id) {
+            batches.push((BatchChoice { id: row.id, code: row.code }, Vec::new()));
+        }
+        if let (Some(event_type), Some((_, types))) = (row.event_type, batches.last_mut()) {
+            types.push(event_type);
+        }
+    }
+
+    Ok(batches
+        .into_iter()
+        .filter(|(_, types)| compute_status(types.iter().map(String::as_str)) == "bottled")
+        .map(|(b, _)| b)
+        .collect())
+}
+
 async fn fetch_event_types(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Vec<String>, sqlx::Error> {
     let rows = sqlx::query!(
         "SELECT DISTINCT event_type FROM events WHERE batch_id = ?",
@@ -302,6 +381,14 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
     .fetch_one(db)
     .await?;
 
+    let ratings = fetch_comparative_ratings(db).await?;
+    let rating = ratings.get(&id).map(|r| RatingSummary {
+        rating: r.rating.round() as i64,
+        rank: 1 + ratings.values().filter(|o| o.rating > r.rating + 1e-9).count(),
+        rated_count: ratings.len(),
+        comparisons: r.comparisons,
+    });
+
     let batch = BatchDetail {
         id: row.id,
         code: row.code,
@@ -309,6 +396,7 @@ async fn fetch_meta(db: &sqlx::SqlitePool, id: i64) -> Result<Option<MetaTemplat
         season_year: row.season_year,
         notes: row.notes,
         started_on,
+        rating,
     };
 
     Ok(Some(MetaTemplate {
@@ -423,6 +511,23 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
     .fetch_all(db)
     .await?;
 
+    // Comparisons show on both batches' timelines, so match either side.
+    let comparisons = sqlx::query!(
+        r#"
+        SELECT e.id as "event_id!", e.occurred_at, e.notes, e.batch_id, b.code as batch_code,
+               ce.other_batch_id, ob.code as other_code, ce.outcome
+        FROM comparison_events ce
+        JOIN events e ON e.id = ce.event_id
+        JOIN batches b ON b.id = e.batch_id
+        JOIN batches ob ON ob.id = ce.other_batch_id
+        WHERE e.batch_id = ? OR ce.other_batch_id = ?
+        "#,
+        batch_id,
+        batch_id
+    )
+    .fetch_all(db)
+    .await?;
+
     // Liters per tree — output_volume_l * percentage / 100, summed
     // across every juicing event the batch has, computed on read like
     // every other derived figure in this app rather than tracking a
@@ -481,6 +586,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Juicing",
             kind_slug: "juicing",
             summary,
+            link: None,
         });
     }
 
@@ -495,6 +601,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Additive",
             kind_slug: "additive",
             summary,
+            link: None,
         });
     }
 
@@ -529,6 +636,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Measurement",
             kind_slug: "measurement",
             summary,
+            link: None,
         });
     }
 
@@ -546,6 +654,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Racking",
             kind_slug: "racking",
             summary,
+            link: None,
         });
     }
 
@@ -563,6 +672,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Bottling",
             kind_slug: "bottling",
             summary,
+            link: None,
         });
     }
 
@@ -577,6 +687,7 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Failed",
             kind_slug: "failed",
             summary,
+            link: None,
         });
     }
 
@@ -594,6 +705,41 @@ async fn fetch_timeline(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Timeline
             kind_label: "Tasting",
             kind_slug: "tasting",
             summary,
+            link: None,
+        });
+    }
+
+    for c in comparisons {
+        let Some(stored) = Outcome::parse(&c.outcome) else {
+            continue;
+        };
+        // Stored from the spine batch's point of view; flip it when
+        // this timeline belongs to the other side.
+        let (outcome, opponent_id, opponent_code) = if c.batch_id == batch_id {
+            (stored, c.other_batch_id, c.other_code)
+        } else {
+            (stored.flipped(), c.batch_id, c.batch_code)
+        };
+        let summary = match outcome {
+            Outcome::Win => "Better than ",
+            Outcome::Loss => "Worse than ",
+            Outcome::Tie => "Tied with ",
+        };
+        let tail = match c.notes.filter(|n| !n.is_empty()) {
+            Some(notes) => format!(" — {notes}"),
+            None => String::new(),
+        };
+        timeline.push(TimelineRow {
+            event_id: c.event_id,
+            occurred_at: c.occurred_at,
+            kind_label: "Comparison",
+            kind_slug: "comparison",
+            summary: summary.to_string(),
+            link: Some(TimelineLink {
+                href: format!("/batches/{opponent_id}"),
+                text: opponent_code,
+                tail,
+            }),
         });
     }
 
@@ -735,6 +881,8 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
         latest_taste_score_by_batch.entry(row.batch_id).or_insert(row.score);
     }
 
+    let ratings = fetch_comparative_ratings(&state.db).await?;
+
     let today = dates::today_iso();
 
     let batches = rows
@@ -762,6 +910,7 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Ap
                 trees: trees_by_batch.remove(&row.id).unwrap_or_default(),
                 additives: additives_by_batch.remove(&row.id).unwrap_or_default(),
                 latest_taste_score: latest_taste_score_by_batch.get(&row.id).copied(),
+                comparative_rating: ratings.get(&row.id).map(|r| r.rating.round() as i64),
                 abv_pct,
                 days_since_bottling,
                 bottle_count: bottle_count_by_batch.get(&row.id).copied(),
@@ -825,6 +974,11 @@ pub async fn detail(
     let trees = fetch_trees(&state.db).await?;
     let tree_fields = build_tree_fields(&trees, &HashMap::new());
     let units = fetch_units(&state.db).await?;
+    let comparison_choices = fetch_bottled_batches(&state.db)
+        .await?
+        .into_iter()
+        .filter(|b| b.id != id)
+        .collect();
 
     Ok(DetailTemplate {
         batch_id: meta.batch.id,
@@ -836,6 +990,7 @@ pub async fn detail(
         months: dates::month_options(),
         today_day: dates::today_day(),
         today: dates::today_iso(),
+        comparison_choices,
     }
     .into_response())
 }
@@ -873,9 +1028,24 @@ pub async fn delete(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, AppError> {
+    let mut tx = state.db.begin().await?;
+
+    // Comparisons logged on *other* batches against this one: the FK
+    // cascade would only remove their comparison_events row, leaving
+    // the events spine row behind on the surviving batch, so remove
+    // the spine rows (which cascades to the typed rows) first.
+    sqlx::query!(
+        "DELETE FROM events WHERE id IN (SELECT event_id FROM comparison_events WHERE other_batch_id = ?)",
+        id
+    )
+    .execute(&mut *tx)
+    .await?;
+
     sqlx::query!("DELETE FROM batches WHERE id = ?", id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await?;
+
+    tx.commit().await?;
 
     let mut response = StatusCode::OK.into_response();
     response
@@ -1660,4 +1830,202 @@ pub async fn update_tasting(
 
     let timeline = fetch_timeline(&state.db, batch_id).await?;
     Ok(timeline)
+}
+
+// ---- comparison ----
+
+/// Shared checks for adding/editing a comparison: a known outcome, and
+/// an existing batch on the other side that isn't this one.
+async fn validate_comparison(
+    db: &sqlx::SqlitePool,
+    batch_id: i64,
+    form: &AddComparisonForm,
+) -> Result<Result<Outcome, Response>, sqlx::Error> {
+    let Some(outcome) = Outcome::parse(&form.outcome) else {
+        return Ok(Err((StatusCode::UNPROCESSABLE_ENTITY, "unknown outcome").into_response()));
+    };
+    if form.other_batch_id == batch_id {
+        return Ok(Err(
+            (StatusCode::UNPROCESSABLE_ENTITY, "a batch can't be compared with itself").into_response(),
+        ));
+    }
+    let exists = sqlx::query_scalar!("SELECT id FROM batches WHERE id = ?", form.other_batch_id)
+        .fetch_optional(db)
+        .await?
+        .is_some();
+    if !exists {
+        return Ok(Err((StatusCode::UNPROCESSABLE_ENTITY, "other batch not found").into_response()));
+    }
+    Ok(Ok(outcome))
+}
+
+pub async fn add_comparison(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AddComparisonForm>,
+) -> Result<Response, AppError> {
+    let outcome = match validate_comparison(&state.db, id, &form).await? {
+        Ok(outcome) => outcome,
+        Err(response) => return Ok(response),
+    };
+
+    let mut tx = state.db.begin().await?;
+
+    let event = sqlx::query!(
+        "INSERT INTO events (batch_id, event_type, occurred_at, notes) VALUES (?, 'comparison', ?, ?)",
+        id,
+        form.occurred_at,
+        form.notes
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let event_id = event.last_insert_rowid();
+    let outcome = outcome.as_str();
+
+    sqlx::query!(
+        "INSERT INTO comparison_events (event_id, other_batch_id, outcome) VALUES (?, ?, ?)",
+        event_id,
+        form.other_batch_id,
+        outcome
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    // The rating shown in the meta card changes too, so refresh it out
+    // of band alongside the timeline.
+    Ok(timeline_with_meta(&state.db, id).await?)
+}
+
+/// The edit form works from either batch's page, always from the
+/// viewing batch's point of view.
+pub async fn edit_comparison_fragment(
+    State(state): State<AppState>,
+    Path((batch_id, event_id)): Path<(i64, i64)>,
+) -> Result<Response, AppError> {
+    let row = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, e.notes, e.batch_id, ce.other_batch_id, ce.outcome
+        FROM comparison_events ce
+        JOIN events e ON e.id = ce.event_id
+        WHERE e.id = ? AND (e.batch_id = ? OR ce.other_batch_id = ?)
+        "#,
+        event_id,
+        batch_id,
+        batch_id
+    )
+    .fetch_optional(&state.db)
+    .await?;
+
+    let Some(row) = row else {
+        return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
+    };
+    let Some(stored) = Outcome::parse(&row.outcome) else {
+        return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
+    };
+
+    let (outcome, other_batch_id) = if row.batch_id == batch_id {
+        (stored, row.other_batch_id)
+    } else {
+        (stored.flipped(), row.batch_id)
+    };
+
+    let mut choices: Vec<BatchChoice> = fetch_bottled_batches(&state.db)
+        .await?
+        .into_iter()
+        .filter(|b| b.id != batch_id)
+        .collect();
+    // Keep the current opponent selectable even if it's no longer
+    // bottled (e.g. marked failed since).
+    if !choices.iter().any(|b| b.id == other_batch_id) {
+        let code = sqlx::query_scalar!("SELECT code FROM batches WHERE id = ?", other_batch_id)
+            .fetch_one(&state.db)
+            .await?;
+        choices.push(BatchChoice { id: other_batch_id, code });
+        choices.sort_by(|a, b| a.code.cmp(&b.code));
+    }
+
+    Ok(EditComparisonTemplate {
+        batch_id,
+        event_id,
+        occurred_at: row.occurred_at,
+        other_batch_id,
+        outcome: outcome.as_str(),
+        notes: row.notes,
+        choices,
+    }
+    .into_response())
+}
+
+pub async fn update_comparison(
+    State(state): State<AppState>,
+    Path((batch_id, event_id)): Path<(i64, i64)>,
+    Form(form): Form<AddComparisonForm>,
+) -> Result<Response, AppError> {
+    let outcome = match validate_comparison(&state.db, batch_id, &form).await? {
+        Ok(outcome) => outcome,
+        Err(response) => return Ok(response),
+    };
+
+    let mut tx = state.db.begin().await?;
+
+    // The form is from the viewing batch's point of view, so the event
+    // is re-stored from that side: the viewing batch becomes the spine
+    // batch. That also lets the other batch be changed from either page.
+    let updated = sqlx::query!(
+        r#"
+        UPDATE events SET batch_id = ?, occurred_at = ?, notes = ?
+        WHERE id = ?
+          AND id IN (SELECT event_id FROM comparison_events)
+          AND (batch_id = ? OR id IN (SELECT event_id FROM comparison_events WHERE other_batch_id = ?))
+        "#,
+        batch_id,
+        form.occurred_at,
+        form.notes,
+        event_id,
+        batch_id,
+        batch_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    if updated.rows_affected() == 0 {
+        return Ok((StatusCode::NOT_FOUND, "event not found").into_response());
+    }
+
+    let outcome = outcome.as_str();
+    sqlx::query!(
+        "UPDATE comparison_events SET other_batch_id = ?, outcome = ? WHERE event_id = ?",
+        form.other_batch_id,
+        outcome,
+        event_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(timeline_with_meta(&state.db, batch_id).await?)
+}
+
+/// The timeline (the comparison forms' own hx-target) plus the meta
+/// card as an out-of-band swap, since a new or edited comparison also
+/// changes the rating shown there. Mirror image of `add_failure`'s
+/// response.
+async fn timeline_with_meta(db: &sqlx::SqlitePool, batch_id: i64) -> Result<Response, AppError> {
+    let Some(meta) = fetch_meta(db, batch_id).await? else {
+        return Ok((StatusCode::NOT_FOUND, "batch not found").into_response());
+    };
+    let timeline = fetch_timeline(db, batch_id).await?;
+
+    let timeline_html = timeline.render().map_err(anyhow::Error::from)?;
+    let meta_html = meta.render().map_err(anyhow::Error::from)?.replacen(
+        "id=\"batch-meta\"",
+        "id=\"batch-meta\" hx-swap-oob=\"true\"",
+        1,
+    );
+
+    Ok(Html(format!("{timeline_html}{meta_html}")).into_response())
 }

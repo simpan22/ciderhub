@@ -28,6 +28,7 @@
         <tr>
             <th>Code</th>
             <th>Taste score</th>
+            <th>Rating</th>
             <th>Season</th>
             <th>Status</th>
             <th>Started</th>
@@ -44,6 +45,7 @@
         <tr>
             <td><a href="/batches/{{ b.id }}">{{ b.code }}</a></td>
             <td>{% if let Some(score) = b.latest_taste_score %}{{ score }}/10{% else %}—{% endif %}</td>
+            <td>{% if let Some(rating) = b.comparative_rating %}{{ rating }}{% else %}—{% endif %}</td>
             <td>{{ b.season_year }}</td>
             <td><span class="status status--{{ b.status }}">{{ b.status }}</span></td>
             <td>{{ b.started_on.as_deref().unwrap_or("—") }}</td>

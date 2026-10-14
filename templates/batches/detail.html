@@ -125,5 +125,32 @@
         <button type="submit">Add</button>
     </form>
 </details>
+
+{% if !comparison_choices.is_empty() %}
+<details class="card" id="log-comparison">
+    <summary>Log comparison</summary>
+    <form class="log-form" hx-post="/batches/{{ batch.id }}/events/comparison" hx-target="#batch-timeline" hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful) ciderhubAfterEventSubmit(this, 'comparison')">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ today }}" required></label>
+            <label>Compared with
+                <select name="other_batch_id" required>
+                    {% for b in comparison_choices %}
+                    <option value="{{ b.id }}">{{ b.code }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <fieldset>
+                <legend>Which was better?</legend>
+                <label class="checkbox"><input type="radio" name="outcome" value="win" required> {{ batch.code }}</label>
+                <label class="checkbox"><input type="radio" name="outcome" value="tie"> About the same</label>
+                <label class="checkbox"><input type="radio" name="outcome" value="loss"> The other batch</label>
+            </fieldset>
+            <label>Notes <input type="text" name="notes"></label>
+        </div>
+        <button type="submit">Add</button>
+    </form>
+</details>
+{% endif %}
 {% endif %}
 {% endblock %}

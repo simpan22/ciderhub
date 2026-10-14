@@ -3,6 +3,9 @@
     <p class="muted">
         {{ batch.season_year }} · <span class="status status--{{ batch.status }}">{{ batch.status }}</span>
         · {% if let Some(started) = batch.started_on %}Started {{ started }}{% else %}Not started yet{% endif %}
+        {% if let Some(r) = batch.rating %}
+        · Comparative rating {{ r.rating }} (#{{ r.rank }} of {{ r.rated_count }} rated, {{ r.comparisons }} comparison{% if r.comparisons != 1 %}s{% endif %})
+        {% endif %}
     </p>
     <form class="inline-form" hx-put="/batches/{{ batch.id }}" hx-target="#batch-meta" hx-swap="outerHTML">
         <label>Notes <input type="text" name="notes" value="{{ batch.notes.as_deref().unwrap_or("") }}"></label>

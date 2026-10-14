@@ -88,6 +88,10 @@ pub struct BatchListItem {
     /// Score (0-10) from the batch's most recent tasting event, if it
     /// has any.
     pub latest_taste_score: Option<i64>,
+    /// Elo-style Bradley-Terry rating from pairwise comparisons,
+    /// rounded. `None` when the batch has never been compared. See
+    /// docs/specs/bradley-terry-taste-rating.md.
+    pub comparative_rating: Option<i64>,
     /// Potential ABV assuming full attenuation to ~1.000 SG, from the
     /// batch's starting gravity alone — only trustworthy (and only
     /// ever `Some`) when that reading was taken the same day as the
@@ -125,6 +129,16 @@ pub struct TimelineRow {
     /// Lowercase, matches the `{kind}` path segment used to edit this event.
     pub kind_slug: &'static str,
     pub summary: String,
+    /// Rendered as a link right after `summary` — only comparisons use
+    /// it, to link the batch on the other side.
+    pub link: Option<TimelineLink>,
+}
+
+pub struct TimelineLink {
+    pub href: String,
+    pub text: String,
+    /// Plain text after the link (e.g. the " — notes" suffix).
+    pub tail: String,
 }
 
 /// One tree's checkbox + share of the juicing event's output, in the
@@ -217,6 +231,33 @@ pub struct AddTastingForm {
     pub tasting_notes: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none", default)]
     pub notes: Option<String>,
+}
+
+/// `outcome` is "win" / "loss" / "tie" from the point of view of the
+/// batch whose page the form was submitted from; the handler parses it
+/// with `ranking::Outcome::parse`. Used for both adding and editing.
+#[derive(Deserialize)]
+pub struct AddComparisonForm {
+    pub occurred_at: String,
+    pub other_batch_id: i64,
+    pub outcome: String,
+    #[serde(deserialize_with = "empty_string_as_none", default)]
+    pub notes: Option<String>,
+}
+
+/// A batch that can be picked as the other side of a comparison.
+pub struct BatchChoice {
+    pub id: i64,
+    pub code: String,
+}
+
+/// A batch's comparative rating for the detail page, with its place
+/// among every rated batch.
+pub struct RatingSummary {
+    pub rating: i64,
+    pub rank: usize,
+    pub rated_count: usize,
+    pub comparisons: u32,
 }
 
 pub struct BatchOption {

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT b.id as \"id!\", b.code, e.event_type as \"event_type?\"\n        FROM batches b\n        LEFT JOIN events e ON e.batch_id = b.id\n        ORDER BY b.code\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "code",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "event_type?",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "75e03d9869cd1e96f41963ae663b8af4c3ea96bb48b0f4ee7dd40197f70db19e"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM events WHERE id IN (SELECT event_id FROM comparison_events WHERE other_batch_id = ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "f9dd5b6f4abc0cf4587f4fa47880c0f8f5257b862893aada43c98d439c73ee16"
+}

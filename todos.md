@@ -59,3 +59,6 @@ In the season overview we should add weekly lines labeled with dates to make it 
 We need explicit grid lines for the plots to make it easier to read the values. The grid should be light gray and not too intrusive.
 
 # Bug: Remove the date labels at the start and end of the timeline in the Season overview (Status: Done — docs/specs/timeline-remove-endpoint-labels.md)
+
+# Feature: Comparative rating of taste using the Bradley-Terry model (Status: Done — docs/specs/bradley-terry-taste-rating.md)
+It is hard to rank taste using an absolute scale. Sometimes i try two different ciders and i clearly know which is better. To still get a per cider taste score id like to use the Bradley-Terry model. This score should be separate from the current taste score, and we should add a new event type to handle logging of comparisons.

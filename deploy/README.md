@@ -184,6 +184,13 @@ database file with the service stopped — never add it to
 database, run the script against the copy, and diff row counts across
 every affected table first.
 
+`deploy/rebuild_events_drop_type_check.py` removes the
+`events.event_type` CHECK constraint entirely (see
+`docs/specs/bradley-terry-taste-rating.md`). Once it has run on a
+database, new event types there only need a normal migration for their
+typed table — no more rebuilds just to extend that list. It is safe
+to re-run, and rolls back by itself if any table's row count changes.
+
 ## Backups
 
 Not yet automated. The whole app's state is the one file at

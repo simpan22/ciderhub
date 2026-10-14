@@ -2,11 +2,12 @@
 // page: on a successful submit, the form is cleared but its date is
 // preserved (not reset to today), the card collapses, and the next card
 // in the cidermaking sequence opens with that date carried forward.
-// Measurement is the one exception — it stays open, since logging
-// several readings in a row is the common case.
+// Measurement and comparison are the exceptions — they stay open, since
+// logging several readings (or several pairs in one tasting) in a row is
+// the common case.
 (function () {
     const SEQUENCE = ["juicing", "additive", "measurement", "racking", "bottling"];
-    const STAYS_OPEN = new Set(["measurement"]);
+    const STAYS_OPEN = new Set(["measurement", "comparison"]);
 
     function seasonYear() {
         const el = document.querySelector("[data-season-year]");

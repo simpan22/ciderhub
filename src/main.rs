@@ -5,6 +5,7 @@ mod dates;
 mod error;
 mod handlers;
 mod models;
+mod ranking;
 mod state;
 
 use axum::routing::get;
@@ -152,6 +153,18 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/batches/{batch_id}/events/tasting/{event_id}",
             axum::routing::put(handlers::batches::update_tasting),
+        )
+        .route(
+            "/batches/{id}/events/comparison",
+            axum::routing::post(handlers::batches::add_comparison),
+        )
+        .route(
+            "/batches/{batch_id}/events/comparison/{event_id}/edit",
+            get(handlers::batches::edit_comparison_fragment),
+        )
+        .route(
+            "/batches/{batch_id}/events/comparison/{event_id}",
+            axum::routing::put(handlers::batches::update_comparison),
         )
         .route("/login", axum::routing::post(handlers::auth::login))
         .nest_service("/static", ServeDir::new("static"))

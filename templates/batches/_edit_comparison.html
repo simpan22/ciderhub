@@ -1,0 +1,25 @@
+<li id="event-{{ event_id }}" class="timeline__edit-row">
+    <form class="log-form" hx-put="/batches/{{ batch_id }}/events/comparison/{{ event_id }}" hx-target="#batch-timeline" hx-swap="outerHTML">
+        <div class="log-form__fields">
+            <label>Date <input type="date" name="occurred_at" value="{{ occurred_at }}" required></label>
+            <label>Compared with
+                <select name="other_batch_id" required>
+                    {% for b in choices %}
+                    <option value="{{ b.id }}" {% if b.id == other_batch_id %}selected{% endif %}>{{ b.code }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <fieldset>
+                <legend>Which was better?</legend>
+                <label class="checkbox"><input type="radio" name="outcome" value="win" {% if outcome == "win" %}checked{% endif %} required> This batch</label>
+                <label class="checkbox"><input type="radio" name="outcome" value="tie" {% if outcome == "tie" %}checked{% endif %}> About the same</label>
+                <label class="checkbox"><input type="radio" name="outcome" value="loss" {% if outcome == "loss" %}checked{% endif %}> The other batch</label>
+            </fieldset>
+            <label>Notes <input type="text" name="notes" value="{{ notes.as_deref().unwrap_or("") }}"></label>
+        </div>
+        <div class="log-form__actions">
+            <button type="button" hx-get="/batches/{{ batch_id }}/timeline" hx-target="#batch-timeline" hx-swap="outerHTML">Cancel</button>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</li>
