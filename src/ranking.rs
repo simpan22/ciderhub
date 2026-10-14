@@ -51,6 +51,12 @@ pub struct Comparison {
     pub outcome: Outcome,
 }
 
+/// A `Comparison` plus the date it was logged on (`YYYY-MM-DD`).
+pub struct DatedComparison {
+    pub occurred_at: String,
+    pub comparison: Comparison,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Rating {
     /// Elo-style: 1500 is an average batch, +400 is ~10:1 odds of
@@ -144,6 +150,79 @@ pub fn fit(comparisons: &[Comparison]) -> HashMap<i64, Rating> {
         .collect()
 }
 
+/// One point in a batch's rating history.
+#[derive(Clone, Debug)]
+pub struct HistoryEntry {
+    pub date: String,
+    pub rating: Rating,
+    /// False only for the closing entry described on `history`.
+    pub compared: bool,
+}
+
+/// For each date (ascending) on which a batch was compared, its rating
+/// from a fit over every comparison up to and including that date —
+/// what was known then, so later comparisons never change earlier
+/// entries. A batch only gets entries on dates *it* was compared,
+/// not whenever two other batches were.
+///
+/// Comparisons between other batches still move a batch's rating a
+/// little, so when its current rating differs from its last entry, one
+/// closing entry (`compared: false`) is added at the date of the latest
+/// comparison overall. That keeps each history ending at the same
+/// value as `fit` over everything, i.e. what the batch list shows. See
+/// docs/specs/plot-comparative-rating.md.
+pub fn history(comparisons: &[DatedComparison]) -> HashMap<i64, Vec<HistoryEntry>> {
+    let mut sorted: Vec<&DatedComparison> = comparisons.iter().collect();
+    sorted.sort_by(|a, b| a.occurred_at.cmp(&b.occurred_at));
+
+    let mut history: HashMap<i64, Vec<HistoryEntry>> = HashMap::new();
+    let mut so_far: Vec<Comparison> = Vec::new();
+    let mut i = 0;
+    while i < sorted.len() {
+        let date = &sorted[i].occurred_at;
+        let mut compared_today: Vec<i64> = Vec::new();
+        while i < sorted.len() && &sorted[i].occurred_at == date {
+            let c = &sorted[i].comparison;
+            so_far.push(Comparison { a: c.a, b: c.b, outcome: c.outcome });
+            for id in [c.a, c.b] {
+                if !compared_today.contains(&id) {
+                    compared_today.push(id);
+                }
+            }
+            i += 1;
+        }
+
+        let ratings = fit(&so_far);
+        for id in compared_today {
+            if let Some(rating) = ratings.get(&id) {
+                history.entry(id).or_default().push(HistoryEntry {
+                    date: date.clone(),
+                    rating: *rating,
+                    compared: true,
+                });
+            }
+        }
+    }
+
+    if let Some(last) = sorted.last() {
+        let current = fit(&so_far);
+        for (id, entries) in history.iter_mut() {
+            let (Some(entry), Some(now)) = (entries.last(), current.get(id)) else {
+                continue;
+            };
+            if entry.date != last.occurred_at && (entry.rating.rating - now.rating).abs() > 1e-6 {
+                entries.push(HistoryEntry {
+                    date: last.occurred_at.clone(),
+                    rating: *now,
+                    compared: false,
+                });
+            }
+        }
+    }
+
+    history
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,6 +304,67 @@ mod tests {
         assert!((rating(&r, 1) - 1559.586_315_672_4).abs() < 1e-6);
         assert!((rating(&r, 2) - 1440.413_684_327_6).abs() < 1e-6);
         assert!((rating(&r, 3) - 1500.0).abs() < 1e-6);
+    }
+
+    fn dated(occurred_at: &str, a: i64, b: i64, outcome: Outcome) -> DatedComparison {
+        DatedComparison { occurred_at: occurred_at.to_string(), comparison: cmp(a, b, outcome) }
+    }
+
+    #[test]
+    fn history_ends_at_the_full_fit() {
+        let log = [
+            dated("2026-10-03", 1, 2, Outcome::Win),
+            dated("2026-10-01", 2, 3, Outcome::Tie),
+            dated("2026-10-02", 3, 1, Outcome::Win),
+        ];
+        let all: Vec<Comparison> = log
+            .iter()
+            .map(|d| cmp(d.comparison.a, d.comparison.b, d.comparison.outcome))
+            .collect();
+        let full = fit(&all);
+        let h = history(&log);
+        for id in [1, 2, 3] {
+            let last = h[&id].last().unwrap().rating.rating;
+            assert!((last - full[&id].rating).abs() < 1e-6, "{id}: {last} vs {}", full[&id].rating);
+        }
+    }
+
+    #[test]
+    fn history_has_dates_the_batch_was_compared_plus_a_closing_entry() {
+        let h = history(&[
+            dated("2026-10-01", 1, 2, Outcome::Win),
+            dated("2026-10-02", 2, 3, Outcome::Win),
+            dated("2026-10-02", 2, 3, Outcome::Tie),
+            dated("2026-10-04", 2, 3, Outcome::Win),
+        ]);
+        let dates = |id: i64| {
+            h[&id]
+                .iter()
+                .map(|e| (e.date.as_str(), e.compared))
+                .collect::<Vec<_>>()
+        };
+        // Batch 1 was only compared once; 2-vs-3 results since then
+        // moved its rating, so it gets one closing entry at the last
+        // comparison date rather than one per day.
+        assert_eq!(dates(1), [("2026-10-01", true), ("2026-10-04", false)]);
+        // Two comparisons on one day give one entry, after both.
+        assert_eq!(dates(2), [("2026-10-01", true), ("2026-10-02", true), ("2026-10-04", true)]);
+        assert_eq!(dates(3), [("2026-10-02", true), ("2026-10-04", true)]);
+        assert_eq!(h[&2][1].rating.comparisons, 3);
+    }
+
+    #[test]
+    fn later_comparisons_leave_earlier_entries_alone() {
+        let early = [dated("2026-10-01", 1, 2, Outcome::Win)];
+        let more = [
+            dated("2026-10-01", 1, 2, Outcome::Win),
+            dated("2026-10-05", 2, 1, Outcome::Win),
+            dated("2026-10-06", 2, 1, Outcome::Win),
+        ];
+        let before = history(&early)[&1][0].rating.rating;
+        let h = history(&more);
+        assert!((h[&1][0].rating.rating - before).abs() < 1e-12);
+        assert!(h[&1].last().unwrap().rating.rating < before);
     }
 
     #[test]

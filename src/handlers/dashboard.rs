@@ -12,14 +12,16 @@ use crate::charts::{day_offset, render_line_chart, render_season_timeline, Serie
 use crate::dates;
 use crate::error::AppError;
 use crate::models::{BatchOption, BatchTimelineRow, ChartSection, MetricOption, SeasonOption};
+use crate::ranking::{self, Comparison, DatedComparison, Outcome};
 use crate::state::AppState;
 
-const METRICS: [(&str, &str); 5] = [
+const METRICS: [(&str, &str); 6] = [
     ("specific_gravity", "Specific Gravity"),
     ("ph", "pH"),
     ("temperature_c", "Temperature (°C)"),
     ("volume_l", "Volume (L)"),
     ("score", "Taste Score"),
+    ("rating", "Comparative Rating"),
 ];
 
 /// Query params arrive as repeated `batch_id=1&batch_id=2&metric=ph`
@@ -152,8 +154,76 @@ fn format_metric_value(metric: &str, value: f64) -> String {
         "temperature_c" => format!("{value:.1}°C"),
         "volume_l" => format!("{value:.1} L"),
         "score" => format!("{value:.0}/10"),
+        "rating" => format!("Rating {value:.0}"),
         _ => value.to_string(),
     }
+}
+
+/// Every batch's comparative rating as it stood after each date it was
+/// compared on (see docs/specs/plot-comparative-rating.md). Unlike the
+/// other metrics this can't be fetched per batch: a rating is a fit
+/// over every batch's comparisons, so they're all loaded once here.
+/// Each reading's `notes` lists that day's comparisons from the
+/// batch's own point of view, for the tooltip.
+async fn fetch_rating_series(db: &sqlx::SqlitePool) -> Result<HashMap<i64, Vec<MetricReading>>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT e.occurred_at, e.batch_id, b.code as batch_code,
+               ce.other_batch_id, ob.code as other_code, ce.outcome
+        FROM comparison_events ce
+        JOIN events e ON e.id = ce.event_id
+        JOIN batches b ON b.id = e.batch_id
+        JOIN batches ob ON ob.id = ce.other_batch_id
+        ORDER BY e.occurred_at, e.id
+        "#
+    )
+    .fetch_all(db)
+    .await?;
+
+    let mut comparisons = Vec::new();
+    let mut descriptions: HashMap<(i64, String), Vec<String>> = HashMap::new();
+    for row in rows {
+        let Some(outcome) = Outcome::parse(&row.outcome) else {
+            continue;
+        };
+        for (id, opponent, outcome) in [
+            (row.batch_id, &row.other_code, outcome),
+            (row.other_batch_id, &row.batch_code, outcome.flipped()),
+        ] {
+            let verb = match outcome {
+                Outcome::Win => "better than",
+                Outcome::Loss => "worse than",
+                Outcome::Tie => "tied with",
+            };
+            descriptions
+                .entry((id, row.occurred_at.clone()))
+                .or_default()
+                .push(format!("{verb} {opponent}"));
+        }
+        comparisons.push(DatedComparison {
+            occurred_at: row.occurred_at,
+            comparison: Comparison { a: row.batch_id, b: row.other_batch_id, outcome },
+        });
+    }
+
+    Ok(ranking::history(&comparisons)
+        .into_iter()
+        .map(|(id, entries)| {
+            let readings = entries
+                .into_iter()
+                .map(|e| MetricReading {
+                    notes: if e.compared {
+                        descriptions.get(&(id, e.date.clone())).map(|d| d.join("; "))
+                    } else {
+                        Some("after comparisons between other batches".to_string())
+                    },
+                    occurred_at: e.date,
+                    value: e.rating.rating,
+                })
+                .collect();
+            (id, readings)
+        })
+        .collect())
 }
 
 /// Every involved batch's first `juicing` event date, in one query —
@@ -343,6 +413,12 @@ async fn build_charts(
     // just the ones it happens to have data for.
     let juicing_dates = fetch_juicing_dates(db, batch_ids).await?;
 
+    let mut rating_series = if metrics.iter().any(|m| m == "rating") {
+        fetch_rating_series(db).await?
+    } else {
+        HashMap::new()
+    };
+
     let mut charts = Vec::new();
     for (slug, label) in METRICS {
         if !metrics.iter().any(|m| m == slug) {
@@ -358,7 +434,11 @@ async fn build_charts(
                 continue;
             };
 
-            let readings = fetch_measurement_series(db, batch_id, slug).await?;
+            let readings = if slug == "rating" {
+                rating_series.remove(&batch_id).unwrap_or_default()
+            } else {
+                fetch_measurement_series(db, batch_id, slug).await?
+            };
             let points: Vec<SeriesPoint> = readings
                 .into_iter()
                 .filter_map(|r| {

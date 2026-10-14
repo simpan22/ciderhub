@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT e.occurred_at, e.batch_id, b.code as batch_code,\n               ce.other_batch_id, ob.code as other_code, ce.outcome\n        FROM comparison_events ce\n        JOIN events e ON e.id = ce.event_id\n        JOIN batches b ON b.id = e.batch_id\n        JOIN batches ob ON ob.id = ce.other_batch_id\n        ORDER BY e.occurred_at, e.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "occurred_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "batch_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "batch_code",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "other_batch_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "other_code",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "outcome",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "78fd54ecf7ad21a287bd0027f9adf0a19db36bff3faca1029b3dbc0fdedfd53b"
+}
